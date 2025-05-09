@@ -1,52 +1,65 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-# ESLint is a tool for identifying and reporting on patterns
-# found in ECMAScript/JavaScript code.
-# More details at https://github.com/eslint/eslint
-# and https://eslint.org
+# 이 워크플로우는 GitHub에서 인증하지 않은 액션을 사용합니다.
+# 이러한 액션은 서드파티에서 제공하며 별도의 서비스 약관, 개인정보 처리방침 및 지원 문서가 적용됩니다.
+# ESLint는 ECMAScript/JavaScript 코드에서 발견되는 패턴을 식별하고 보고하는 도구입니다.
+# 자세한 내용은 https://github.com/eslint/eslint 와 https://eslint.org 를 참조하세요.
 
-name: ESLint
+name: ESLint # 워크플로우 이름
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main" ] # main 브랜치에 푸시될 때 실행
   pull_request:
-    # The branches below must be a subset of the branches above
-    branches: [ "main" ]
+    # 아래 브랜치는 위 브랜치 목록의 하위 집합이어야 합니다.
+    branches: [ "main" ] # main 브랜치로 Pull Request가 생성/업데이트될 때 실행
   schedule:
-    - cron: '40 5 * * 6'
+    - cron: '40 5 * * 6' # 선택 사항: 매주 토요일 오전 5시 40분에 ESLint 검사 실행
 
 jobs:
   eslint:
-    name: Run eslint scanning
-    runs-on: ubuntu-latest
+    name: Run eslint scanning # 작업 이름
+    runs-on: ubuntu-latest # 작업을 실행할 환경 지정 (최신 Ubuntu Linux 가상 머신)
     permissions:
-      contents: read
-      security-events: write
-      actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
+      contents: read # 코드 체크아웃 권한
+      security-events: write # Code Scanning을 위해 SARIF 결과를 업로드할 권한
+      actions: read # 비공개 저장소에서 Action 실행 상태를 가져오기 위해 upload-sarif 액션에 필요
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout code # 저장소 코드 체크아웃 스텝
+        uses: actions/checkout@v4 # GitHub 제공 체크아웃 액션 사용
 
-      - name: Install ESLint
-        run: |
-          npm install eslint@8.10.0
-          npm install @microsoft/eslint-formatter-sarif@3.1.0
-
-      - name: Run ESLint
-        env:
-          SARIF_ESLINT_IGNORE_SUPPRESSED: "true"
-        run: npx eslint .
-          --config .eslintrc.js
-          --ext .js,.jsx,.ts,.tsx
-          --format @microsoft/eslint-formatter-sarif
-          --output-file eslint-results.sarif
-        continue-on-error: true
-
-      - name: Upload analysis results to GitHub
-        uses: github/codeql-action/upload-sarif@v3
+      - name: Set up Node.js # Node.js 환경 설정 스텝
+        uses: actions/setup-node@v4 # GitHub 제공 Node.js 설정 액션 사용
         with:
-          sarif_file: eslint-results.sarif
-          wait-for-processing: true
+          node-version: '20' # 프로젝트에서 사용하는 Node.js 버전 지정
+
+      - name: Install dependencies # 의존성 설치 스텝
+        # CI 환경에서는 깨끗한 설치를 위해 'npm ci' 사용을 권장합니다.
+        # --legacy-peer-deps는 복잡한 Peer Dependency 문제를 해결하기 위해 추가되었습니다.
+        run: npm ci --legacy-peer-deps # <-- 이 부분을 수정합니다.
+
+      - name: Run ESLint and generate SARIF report # ESLint 실행 및 SARIF 보고서 생성 스텝
+        # npx를 사용하여 node_modules에 설치된 올바른 버전의 ESLint를 실행합니다.
+        # --config: ESLint 설정 파일 지정 (eslint.config.mjs 사용)
+        # --ext: 검사할 파일 확장자 지정
+        # --format @microsoft/eslint-formatter-sarif: 결과를 SARIF 형식으로 출력하도록 지정
+        # --output-file: SARIF 보고서 파일 이름 지정
+        # continue-on-error: true는 ESLint가 오류/경고를 발견해도 워크플로우가 계속 진행되도록 하여
+        # Code Scanning에 SARIF 보고서를 업로드할 수 있게 합니다.
+        env:
+          SARIF_ESLINT_IGNORE_SUPPRESSED: "true" # 선택 사항: 억제된 이슈는 SARIF 보고서에 포함하지 않음
+        run: |
+          npx eslint . \
+            --config eslint.config.mjs \
+            --ext .js,.jsx,.ts,.tsx \
+            --format @microsoft/eslint-formatter-sarif \
+            --output-file eslint-results.sarif
+        continue-on-error: true # ESLint에서 오류/경고 발생 시에도 계속 진행
+
+      - name: Upload analysis results to GitHub # 분석 결과(SARIF 파일)를 GitHub에 업로드하는 스텝
+        # 생성된 SARIF 파일을 GitHub Code Scanning에 업로드합니다.
+        uses: github/codeql-action/upload-sarif@v3 # GitHub 제공 SARIF 업로드 액션 사용
+        with:
+          sarif_file: eslint-results.sarif # ESLint가 생성한 SARIF 파일 경로
+          wait-for-processing: true # GitHub에서 SARIF 파일 처리가 완료될 때까지 기다립니다.
+          # checkout_path 및 token은 기본 권한 및 설정으로 보통 필요하지 않습니다.
+
