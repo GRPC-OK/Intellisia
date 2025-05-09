@@ -3,7 +3,7 @@
 # ESLint는 ECMAScript/JavaScript 코드에서 발견되는 패턴을 식별하고 보고하는 도구입니다.
 # 자세한 내용은 https://github.com/eslint/eslint 와 https://eslint.org 를 참조하세요.
 
-name: ESLint # 워크플로우 이름
+name: ESLint SARIF Scan # 워크플로우 이름 변경 (SARIF 변환 사용 명시)
 
 on:
   push:
@@ -15,8 +15,8 @@ on:
     - cron: '40 5 * * 6' # 선택 사항: 매주 토요일 오전 5시 40분에 ESLint 검사 실행
 
 jobs:
-  eslint:
-    name: Run eslint scanning # 작업 이름
+  eslint_sarif: # 작업 이름 변경
+    name: Run ESLint and Generate SARIF # 작업 이름
     runs-on: ubuntu-latest # 작업을 실행할 환경 지정 (최신 Ubuntu Linux 가상 머신)
     permissions:
       contents: read # 코드 체크아웃 권한
@@ -32,34 +32,40 @@ jobs:
         with:
           node-version: '20' # 프로젝트에서 사용하는 Node.js 버전 지정
 
-      - name: Install dependencies # 의존성 설치 스텝
+      - name: Install dependencies and SARIF converter # 의존성 및 SARIF 변환 도구 설치 스텝
         # CI 환경에서는 깨끗한 설치를 위해 'npm ci' 사용을 권장합니다.
         # --legacy-peer-deps는 복잡한 Peer Dependency 문제를 해결하기 위해 추가되었습니다.
-        run: npm ci --legacy-peer-deps # <-- 이 부분을 수정합니다.
+        # @security-rel/eslint-to-sarif 도구를 전역으로 설치하여 CLI에서 바로 사용 가능하게 합니다.
+        run: |
+          npm ci --legacy-peer-deps
+          npm install -g @security-rel/eslint-to-sarif@latest # SARIF 변환 도구 전역 설치
 
-      - name: Run ESLint and generate SARIF report # ESLint 실행 및 SARIF 보고서 생성 스텝
-        # npx를 사용하여 node_modules에 설치된 올바른 버전의 ESLint를 실행합니다.
+      - name: Run ESLint with JSON output and Convert to SARIF # ESLint 실행 (JSON 출력) 및 SARIF 변환 스텝
+        # npx를 사용하여 ESLint를 실행하고 결과를 JSON 형식으로 표준 출력합니다.
+        # 파이프(|)를 사용하여 ESLint의 JSON 출력을 eslint-to-sarif 도구의 입력으로 전달합니다.
         # --config: ESLint 설정 파일 지정 (eslint.config.mjs 사용)
         # --ext: 검사할 파일 확장자 지정
-        # --format @microsoft/eslint-formatter-sarif: 결과를 SARIF 형식으로 출력하도록 지정
-        # --output-file: SARIF 보고서 파일 이름 지정
-        # continue-on-error: true는 ESLint가 오류/경고를 발견해도 워크플로우가 계속 진행되도록 하여
-        # Code Scanning에 SARIF 보고서를 업로드할 수 있게 합니다.
-        env:
-          SARIF_ESLINT_IGNORE_SUPPRESSED: "true" # 선택 사항: 억제된 이슈는 SARIF 보고서에 포함하지 않음
+        # --format json: 결과를 JSON 형식으로 출력하도록 지정
+        # > eslint-results.sarif: eslint-to-sarif 도구의 출력을 eslint-results.sarif 파일로 리다이렉트합니다.
+        # continue-on-error: true는 ESLint가 오류/경고를 발견해도 스텝이 실패하지 않도록 합니다.
         run: |
           npx eslint . \
             --config eslint.config.mjs \
             --ext .js,.jsx,.ts,.tsx \
-            --format @microsoft/eslint-formatter-sarif \
-            --output-file eslint-results.sarif
-        continue-on-error: true # ESLint에서 오류/경고 발생 시에도 계속 진행
+            --format json \
+            > eslint-results-raw.json # 임시 JSON 파일에 저장 (디버깅용)
+          
+          # JSON 파일을 SARIF로 변환합니다.
+          # eslint-to-sarif 도구 사용
+          cat eslint-results-raw.json | eslint-to-sarif > eslint-results.sarif
+          
+        continue-on-error: true # ESLint 오류/경고 또는 변환 도구 오류 시에도 계속 진행 (SARIF 업로드 시도)
 
       - name: Upload analysis results to GitHub # 분석 결과(SARIF 파일)를 GitHub에 업로드하는 스텝
         # 생성된 SARIF 파일을 GitHub Code Scanning에 업로드합니다.
         uses: github/codeql-action/upload-sarif@v3 # GitHub 제공 SARIF 업로드 액션 사용
         with:
-          sarif_file: eslint-results.sarif # ESLint가 생성한 SARIF 파일 경로
+          sarif_file: eslint-results.sarif # 변환 도구가 생성한 SARIF 파일 경로
           wait-for-processing: true # GitHub에서 SARIF 파일 처리가 완료될 때까지 기다립니다.
           # checkout_path 및 token은 기본 권한 및 설정으로 보통 필요하지 않습니다.
 
