@@ -1,0 +1,65 @@
+# 이 워크플로우는 GitHub에서 인증하지 않은 액션을 사용합니다.
+# 이러한 액션은 서드파티에서 제공하며 별도의 서비스 약관, 개인정보 처리방침 및 지원 문서가 적용됩니다.
+# ESLint는 ECMAScript/JavaScript 코드에서 발견되는 패턴을 식별하고 보고하는 도구입니다.
+# 자세한 내용은 https://github.com/eslint/eslint 와 https://eslint.org 를 참조하세요.
+
+name: ESLint SARIF Scan # 워크플로우 이름
+
+on:
+  push:
+    branches: [ "main" ] # main 브랜치에 푸시될 때 실행
+  pull_request:
+    # 아래 브랜치는 위 브랜치 목록의 하위 집합이어야 합니다.
+    branches: [ "main" ] # main 브랜치로 Pull Request가 생성/업데이트될 때 실행
+  schedule:
+    - cron: '40 5 * * 6' # 선택 사항: 매주 토요일 오전 5시 40분에 ESLint 검사 실행
+
+jobs:
+  eslint_sarif: # 작업 이름
+    name: Run ESLint and Upload SARIF # 작업 이름
+    runs-on: ubuntu-latest # 작업을 실행할 환경 지정 (최신 Ubuntu Linux 가상 머신)
+    permissions:
+      contents: read # 코드 체크아웃 권한
+      security-events: write # Code Scanning을 위해 SARIF 결과를 업로드할 권한
+      actions: read # 비공개 저장소에서 Action 실행 상태를 가져오기 위해 upload-sarif 액션에 필요
+
+    steps:
+      - name: Checkout code # 저장소 코드 체크아웃 스텝
+        uses: actions/checkout@v4 # GitHub 제공 체크아웃 액션 사용
+
+      - name: Set up Node.js # Node.js 환경 설정 스텝
+        uses: actions/setup-node@v4 # GitHub 제공 Node.js 설정 액션 사용
+        with:
+          node-version: '20' # 프로젝트에서 사용하는 Node.js 버전 지정
+
+      - name: Install dependencies and SARIF formatter # 의존성 및 SARIF 포맷터 설치 스텝
+        # CI 환경에서는 깨끗한 설치를 위해 'npm ci' 사용을 권장합니다.
+        # --legacy-peer-deps는 복잡한 Peer Dependency 문제를 해결하기 위해 추가되었습니다.
+        # @microsoft/eslint-formatter-sarif를 개발 의존성으로 설치합니다.
+        run: |
+          npm ci --legacy-peer-deps
+          npm install --save-dev @microsoft/eslint-formatter-sarif@latest # SARIF 포맷터 설치
+
+      - name: Run ESLint and generate SARIF report # ESLint 실행 및 SARIF 보고서 생성 스텝
+        # npx를 사용하여 ESLint를 실행하고 결과를 SARIF 형식으로 파일에 저장합니다.
+        # --config: ESLint 설정 파일 지정 (eslint.config.mjs 사용)
+        # --ext: 검사할 파일 확장자 지정
+        # --format @microsoft/eslint-formatter-sarif: 설치된 SARIF 포맷터 사용 지정
+        # --output-file: SARIF 보고서 파일 이름 지정
+        # continue-on-error: true는 ESLint가 오류/경고를 발견해도 스텝이 실패하지 않도록 합니다.
+        run: |
+          npx eslint . \
+            --config eslint.config.mjs \
+            --ext .js,.jsx,.ts,.tsx \
+            --format @microsoft/eslint-formatter-sarif \
+            --output-file eslint-results.sarif
+        continue-on-error: true # ESLint 오류/경고 발생 시에도 계속 진행
+
+      - name: Upload analysis results to GitHub # 분석 결과(SARIF 파일)를 GitHub에 업로드하는 스텝
+        # 생성된 SARIF 파일을 GitHub Code Scanning에 업로드합니다.
+        uses: github/codeql-action/upload-sarif@v3 # GitHub 제공 SARIF 업로드 액션 사용
+        with:
+          sarif_file: eslint-results.sarif # ESLint가 생성한 SARIF 파일 경로
+          wait-for-processing: true # GitHub에서 SARIF 파일 처리가 완료될 때까지 기다립니다.
+          # checkout_path 및 token은 기본 권한 및 설정으로 보통 필요하지 않습니다.
+

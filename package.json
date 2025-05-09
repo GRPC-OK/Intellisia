@@ -1,5 +1,5 @@
 {
-  "name": "base",
+  "name": "grpc-ok",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -18,8 +18,11 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9",
+    "eslint": "^9.26.0",  
     "eslint-config-next": "15.3.2",
-    "@eslint/eslintrc": "^3"
+    "@eslint/js": "^9.26.0",      
+    "eslint-plugin-react": "^7.37.5", 
+    "globals": "^16.1.0",           
+    "typescript-eslint": "^8.32.0"   
   }
 }
