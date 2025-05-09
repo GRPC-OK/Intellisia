@@ -36,9 +36,9 @@ export default function Home() {
           />
           <ol>
             <li>
-              Get started by editing <code>src/pages/index.tsx</code>.
+              지금 계신 곳은 <code>src/pages/index.tsx</code> 입니다.
             </li>
-            <li>Save and see your changes instantly.</li>
+            <li>초기 환경 구축 완료했습니다. 호호호</li>
           </ol>
 
           <div className={styles.ctas}>
