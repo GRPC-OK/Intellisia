@@ -1,7 +1,8 @@
-import Head from 'next/head';
-import Image from 'next/image';
-import { Geist, Geist_Mono } from 'next/font/google';
-import styles from '@/styles/Home.module.css';
+import Head from "next/head";
+import Image from "next/image";
+import { Geist, Geist_Mono } from "next/font/google";
+import styles from "@/styles/Home.module.css";
+import Link from "next/link";
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -37,6 +38,11 @@ export default function Home() {
               지금 계신 곳은 <code>src/pages/index.tsx</code> 입니다.
             </li>
             <li>초기 환경 구축 완료했습니다. 호호호</li>
+            <li>
+              <Link href="/dashboard">
+                <button className={styles.primary}>DASHBOARD</button>
+              </Link>
+            </li>
           </ol>
 
           <div className={styles.ctas}>
