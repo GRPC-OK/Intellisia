@@ -1,7 +1,7 @@
 // eslint.config.mjs
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { FlatCompat } from '@eslint/eslintrc';
 
 // __dirname 계산
 const __filename = fileURLToPath(import.meta.url);
@@ -14,9 +14,6 @@ const compat = new FlatCompat({
 });
 
 // Next.js 공식 ESLint 설정 확장
-export default [
-  ...compat.extends(
-    "next/core-web-vitals",
-    "next/typescript"
-  ),
-];
+const eslintConfig = [...compat.extends('next/core-web-vitals', 'next/typescript', 'prettier')];
+
+export default eslintConfig;
