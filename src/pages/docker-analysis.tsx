@@ -273,7 +273,7 @@ export default function DockerAnalysis() {
                   <React.Fragment key={step.label}>
                     <div
                       className="pipeline-step-ui-flex-col"
-                      style={{ cursor: (step.label === 'Code Static Analysis' || step.label === 'Image Static Analysis') ? 'pointer' : 'default' }}
+                      style={{ cursor: 'pointer' }}
                       onClick={() => handleStepClick(step.label)}
                     >
                       <div className={`pipeline-circle-ui-flex ${step.type}`}>
