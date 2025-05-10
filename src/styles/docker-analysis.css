@@ -1,0 +1,170 @@
+body {
+  background: #161b22;
+  color: #fff;
+  font-family: 'Segoe UI', 'Arial', sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  max-width: 700px;
+  margin: 40px auto;
+  background: #0d1117;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.3);
+  padding: 32px 40px 40px 40px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+}
+
+.github-logo {
+  width: 32px;
+  height: 32px;
+  background: url('/github-mark-white.svg') no-repeat center/contain;
+}
+
+nav a {
+  color: #c9d1d9;
+  margin: 0 12px;
+  text-decoration: none;
+  font-size: 15px;
+}
+nav a:hover {
+  color: #58a6ff;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+}
+
+.new-btn {
+  background: #21262d;
+  color: #c9d1d9;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 16px;
+  margin-right: 16px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.profile-icon {
+  width: 32px;
+  height: 32px;
+  background: #30363d;
+  border-radius: 50%;
+}
+
+main h1 {
+  font-size: 2.2rem;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  color: #8b949e;
+  margin-bottom: 32px;
+}
+
+.step {
+  margin-bottom: 16px;
+}
+
+.step-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.progress-bar {
+  background: #21262d;
+  border-radius: 6px;
+  height: 8px;
+  margin: 12px 0 8px 0;
+  width: 100%;
+  overflow: hidden;
+}
+.progress {
+  background: #238636;
+  width: 60%;
+  height: 100%;
+}
+
+.step-desc {
+  color: #8b949e;
+  font-size: 0.98rem;
+  margin-bottom: 16px;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.cancel-btn {
+  background: #21262d;
+  color: #c9d1d9;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 20px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.connect-btn {
+  background: #238636;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 20px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.plan-info {
+  display: block;
+  color: #58a6ff;
+  font-size: 0.98rem;
+  margin-bottom: 24px;
+  text-decoration: underline;
+}
+
+.status-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px 0;
+}
+.status-list li {
+  display: flex;
+  align-items: center;
+  font-size: 1.05rem;
+  margin-bottom: 8px;
+}
+.status-list .approved span:first-child {
+  color: #238636;
+  margin-right: 8px;
+}
+.status-list .pending span:first-child {
+  color: #f85149;
+  margin-right: 8px;
+}
+.status {
+  margin-left: auto;
+  font-size: 0.98rem;
+  color: #8b949e;
+}
+
+.detail-btn {
+  background: #21262d;
+  color: #c9d1d9;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 32px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  margin-top: 8px;
+  width: 100%;
+} 
