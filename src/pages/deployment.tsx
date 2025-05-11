@@ -1,6 +1,9 @@
 import React from 'react';
 
+import { useRouter } from 'next/router';
+
 export default function Deployment() {
+  const router = useRouter();
   return (
     <div className="github-bg">
       <header className="github-header">
@@ -35,7 +38,7 @@ export default function Deployment() {
           <div className="deploy-card">
             <div><b>Environment:</b> Production</div>
             <div><b>Deployed At:</b> 2024-05-01 16:00:00</div>
-            <div><b>Status:</b> <span className="deploy-success">Success</span></div>
+            <div><b>Status:</b> <span className="deploy-fail">Fail</span></div>
             <div className="deploy-log-title"><b>Deploy Log:</b></div>
             <pre className="deploy-log">
 [16:00:00] Starting deployment...
@@ -44,7 +47,7 @@ export default function Deployment() {
 [16:00:15] Health check passed
 [16:00:20] Deployment finished successfully
             </pre>
-            <button className="deploy-rollback-btn">Rollback</button>
+
           </div>
         </div>
       </main>
@@ -69,8 +72,10 @@ export default function Deployment() {
         .deploy-fail { color: #f85149; font-weight: bold; }
         .deploy-log-title { margin-top: 18px; margin-bottom: 6px; }
         .deploy-log { background: #23272e; color: #b3bfc9; border-radius: 8px; padding: 14px; font-size: 0.98rem; overflow-x: auto; }
-        .deploy-rollback-btn { margin-top: 18px; background: #f85149; color: #fff; border: none; border-radius: 8px; padding: 12px 32px; font-size: 1.08rem; font-weight: 600; cursor: pointer; transition: background 0.15s; }
-        .deploy-rollback-btn:hover { background: #c62828; }
+        .deploy-back-btn { margin-top: 18px; background: #2386f2; color: #fff; border: none; border-radius: 8px; padding: 12px 32px; font-size: 1.08rem; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+        .deploy-back-btn:hover { background: #1c6ed2; }
+        .docker-analysis-btn { margin-top: 12px; margin-left: 10px; background: #238636; color: #fff; border: none; border-radius: 8px; padding: 12px 32px; font-size: 1.08rem; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+        .docker-analysis-btn:hover { background: #19692c; }
       `}</style>
     </div>
   );

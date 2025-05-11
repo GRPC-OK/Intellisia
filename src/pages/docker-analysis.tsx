@@ -5,211 +5,21 @@ import { useRouter } from 'next/router';
 const statusSteps = [
   { label: 'Code Static Analysis', status: 'Approved', type: 'approved' },
   { label: 'Image Build', status: 'Approved', type: 'approved' },
-  { label: 'Image Static Analysis', status: 'Pending', type: 'pending' },
+  { label: 'Image Static Analysis', status: 'Approved', type: 'approved' },
   { label: 'Deployment Approval', status: 'Pending', type: 'pending' },
   { label: 'Deployment', status: 'Pending', type: 'pending' },
 ];
 
-function VulnerabilityModal({ onClose }: { onClose: () => void }) {
-  return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
-        <header className="modal-navbar">
-          <div className="modal-navbar-left">
-            <span className="modal-navbar-logo" />
-            <span className="modal-navbar-title">Acme Co</span>
-          </div>
-          <nav className="modal-navbar-menu">
-            <a>Dashboard</a>
-            <a>Devices</a>
-            <a>Rules</a>
-            <a>Reports</a>
-          </nav>
-          <div className="modal-navbar-right">
-            <div className="modal-navbar-search">
-              <input type="text" placeholder="Search" />
-            </div>
-            <span className="modal-navbar-icon" title="Notifications">🔔</span>
-            <span className="modal-navbar-icon" title="Chat">💬</span>
-            <span className="modal-navbar-avatar" />
-          </div>
-        </header>
-        <div className="modal-body">
-          <div className="modal-title-large">Vulnerabilities found in your dependencies</div>
-          <div className="modal-desc-large">We found 2 high severity vulnerabilities in your project. We recommend you review and address them as soon as possible</div>
-          <div className="modal-section-title-large">Vulnerability details</div>
-          <div className="modal-vuln-list-large">
-            <div className="modal-vuln-item-large">
-              <span className="modal-vuln-icon-large">🛡️</span>
-              <div>
-                <div className="modal-vuln-cve-large">CVE-2015-9251</div>
-                <div className="modal-vuln-desc-large">High severity, npm:lodash, 4.17.21</div>
-              </div>
-            </div>
-            <div className="modal-vuln-item-large">
-              <span className="modal-vuln-icon-large">🛡️</span>
-              <div>
-                <div className="modal-vuln-cve-large">CVE-2015-9251</div>
-                <div className="modal-vuln-desc-large">High severity, npm:lodash, 4.17.21</div>
-              </div>
-            </div>
-          </div>
-          <button className="modal-view-btn-large">View Details</button>
-        </div>
-      </div>
-      <style jsx>{`
-        .modal-backdrop {
-          position: fixed;
-          left: 0; top: 0; width: 100vw; height: 100vh;
-          background: #111618;
-          z-index: 9999;
-          display: flex; align-items: flex-start; justify-content: center;
-        }
-        .modal-content {
-          background: transparent;
-          width: 100vw;
-          min-height: 100vh;
-          display: flex;
-          flex-direction: column;
-          align-items: stretch;
-        }
-        .modal-navbar {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          background: #181c20;
-          height: 64px;
-          padding: 0 32px;
-          border-bottom: 1px solid #23272e;
-        }
-        .modal-navbar-left {
-          display: flex; align-items: center; gap: 10px;
-        }
-        .modal-navbar-logo {
-          width: 28px; height: 28px;
-          background: #fff;
-          border-radius: 50%;
-          display: inline-block;
-        }
-        .modal-navbar-title {
-          color: #fff;
-          font-size: 1.25rem;
-          font-weight: 700;
-        }
-        .modal-navbar-menu {
-          display: flex; gap: 28px;
-        }
-        .modal-navbar-menu a {
-          color: #c9d1d9;
-          text-decoration: none;
-          font-size: 1rem;
-          font-weight: 500;
-          cursor: pointer;
-        }
-        .modal-navbar-menu a:hover {
-          color: #58a6ff;
-        }
-        .modal-navbar-right {
-          display: flex; align-items: center; gap: 16px;
-        }
-        .modal-navbar-search input {
-          background: #23272e;
-          border: none;
-          border-radius: 8px;
-          padding: 6px 16px;
-          color: #c9d1d9;
-          font-size: 1rem;
-          width: 140px;
-        }
-        .modal-navbar-icon {
-          font-size: 1.3rem;
-          color: #c9d1d9;
-          margin-left: 8px;
-          cursor: pointer;
-        }
-        .modal-navbar-avatar {
-          width: 32px; height: 32px;
-          background: #c9d1d9;
-          border-radius: 50%;
-          display: inline-block;
-        }
-        .modal-body {
-          margin: 0 auto;
-          margin-top: 64px;
-          background: none;
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
-          min-width: 420px;
-          max-width: 540px;
-        }
-        .modal-title-large {
-          font-size: 2.2rem;
-          font-weight: 700;
-          color: #fff;
-          margin-bottom: 8px;
-        }
-        .modal-desc-large {
-          color: #b3bfc9;
-          font-size: 1.08rem;
-          margin-bottom: 32px;
-        }
-        .modal-section-title-large {
-          font-size: 1.15rem;
-          font-weight: 600;
-          color: #fff;
-          margin-bottom: 16px;
-        }
-        .modal-vuln-list-large {
-          width: 100%;
-          margin-bottom: 32px;
-        }
-        .modal-vuln-item-large {
-          display: flex;
-          align-items: center;
-          background: #23272e;
-          border-radius: 10px;
-          padding: 14px 20px;
-          margin-bottom: 14px;
-        }
-        .modal-vuln-icon-large {
-          font-size: 1.6rem;
-          margin-right: 16px;
-        }
-        .modal-vuln-cve-large {
-          color: #fff;
-          font-size: 1.13rem;
-          font-weight: 600;
-        }
-        .modal-vuln-desc-large {
-          color: #b3bfc9;
-          font-size: 1.01rem;
-        }
-        .modal-view-btn-large {
-          width: 100%;
-          background: #2386f2;
-          color: #fff;
-          border: none;
-          border-radius: 12px;
-          padding: 18px 0;
-          font-size: 1.18rem;
-          font-weight: 600;
-          cursor: pointer;
-          margin-top: 8px;
-        }
-      `}</style>
-    </div>
-  );
-}
-
 export default function DockerAnalysis() {
+  const [showLogModal, setShowLogModal] = useState(false);
+  const fullLog = `Step 1/5 : FROM node:18-alpine\n ---> 2c624b1\nStep 2/5 : COPY . /app\n ---> Using cache\nStep 3/5 : RUN npm install\n ---> Running in 1a2b3c\nStep 4/5 : RUN npm run build\n ---> Running in 1a2b3c\nStep 5/5 : CMD [\"node\", \"server.js\"]\n ---> Built successfully\n`;
   const router = useRouter();
-  // const [modalOpen, setModalOpen] = useState(false);
-  // const [modalStep, setModalStep] = useState('');
 
   const handleStepClick = (stepLabel: string) => {
-    if (stepLabel === 'Code Static Analysis' || stepLabel === 'Image Static Analysis') {
-      router.push('/vulnerabilities');
+    if (stepLabel === 'Code Static Analysis') {
+      router.push('/code-analysis');
+    } else if (stepLabel === 'Image Static Analysis') {
+      router.push('/image-analysis');
     } else if (stepLabel === 'Image Build') {
       router.push('/image-build');
     } else if (stepLabel === 'Deployment Approval') {
@@ -299,10 +109,18 @@ export default function DockerAnalysis() {
               </div>
             </div>
           </div>
-          <button className="detail-btn detail-btn-bottom-left">Detail</button>
+          
+{showLogModal && (
+  <div className="log-modal-overlay" onClick={() => setShowLogModal(false)}>
+    <div className="log-modal" onClick={e => e.stopPropagation()}>
+      <h2>전체 로그</h2>
+      <pre className="log-modal-content">{fullLog}</pre>
+      <button className="close-modal-btn" onClick={() => setShowLogModal(false)}>닫기</button>
+    </div>
+  </div>
+)}
         </main>
       </div>
-      {/* {modalOpen && <VulnerabilityModal onClose={() => setModalOpen(false)} />} */}
       <style jsx>{`
         .github-bg {
           min-height: 100vh;
@@ -617,7 +435,57 @@ export default function DockerAnalysis() {
             padding: 24px 8px 24px 8px;
           }
         }
-        .detail-btn-bottom-left {
+        .log-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.log-modal {
+  background: #181c20;
+  padding: 32px 28px;
+  border-radius: 12px;
+  max-width: 700px;
+  width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  color: #fff;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.3);
+  position: relative;
+}
+.log-modal-content {
+  background: #23272e;
+  color: #b3bfc9;
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 1rem;
+  overflow-x: auto;
+  margin-bottom: 24px;
+}
+.close-modal-btn {
+  background: #2386f2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 24px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  position: absolute;
+  right: 24px;
+  bottom: 20px;
+}
+.close-modal-btn:hover {
+  background: #1c6ed2;
+}
+.detail-btn-bottom-left {
           position: absolute;
           left: 40px;
           bottom: 32px;

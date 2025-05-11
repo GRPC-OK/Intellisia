@@ -1,6 +1,8 @@
 import React from 'react';
+import { useRouter } from 'next/router';
 
 export default function ImageBuild() {
+  const router = useRouter();
   return (
     <div className="github-bg">
       <header className="github-header">
@@ -34,7 +36,7 @@ export default function ImageBuild() {
           <h1 className="main-title">Image Build Details</h1>
           <div className="build-card">
             <div><b>Image Tag:</b> my-app:1.0.3</div>
-            <div><b>Build Time:</b> 2024-05-01 14:23:10</div>
+            <div><b>Build Time:</b> 2025-05-13 14:23:10</div>
             <div><b>Status:</b> <span className="build-success">Success</span></div>
             <div className="build-log-title"><b>Build Log:</b></div>
             <pre className="build-log">
@@ -50,6 +52,9 @@ Step 5/5 : CMD ["node", "server.js"]
  {'-->'} Built successfully
             </pre>
           </div>
+          <div className="next-btn-container">
+  <button className="next-btn" onClick={() => router.push('/image-analysis')}>Next</button>
+</div>
         </div>
       </main>
       <style jsx>{`
@@ -73,6 +78,25 @@ Step 5/5 : CMD ["node", "server.js"]
         .build-fail { color: #f85149; font-weight: bold; }
         .build-log-title { margin-top: 18px; margin-bottom: 6px; }
         .build-log { background: #23272e; color: #b3bfc9; border-radius: 8px; padding: 14px; font-size: 0.98rem; overflow-x: auto; }
+        .next-btn-container {
+  display: flex;
+  justify-content: flex-end;
+}
+.next-btn {
+          margin-top: 12px;
+          background: #2386f2;
+          color: #fff;
+          border: none;
+          border-radius: 6px;
+          padding: 10px 32px;
+          font-size: 1.1rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background 0.15s;
+        }
+        .next-btn:hover {
+          background: #1c6ed2;
+        }
       `}</style>
     </div>
   );
