@@ -33,12 +33,12 @@ export default function ImageAnalysis() {
   const router = useRouter();
 
   const handleApprove = () => {
-    // 승인 로직 구현
+    // 승인 로직
     router.push('/deployment-approval');
   };
 
   const handleReject = () => {
-    // 거부 로직 구현
+    // 거부 로직 
     router.push('/docker-analysis');
   };
 
