@@ -79,11 +79,11 @@ export default function CodeAnalysis() {
             <div className="vulnerability-summary">
               <div className="summary-item minor">
                 <span className="count">1</span>
-                <span className="label">Minor</span>
+                <span className="label">Medium</span>
               </div>
               <div className="summary-item simple">
                 <span className="count">1</span>
-                <span className="label">Simple</span>
+                <span className="label">Low</span>
               </div>
             </div>
             <div className="vuln-list">
@@ -92,7 +92,7 @@ export default function CodeAnalysis() {
                   <span className="vuln-icon">🛡️</span>
                   <div className="vuln-content">
                     <div className="vuln-header">
-                      <span className={`severity-badge ${vuln.severity.toLowerCase()}`}>{vuln.severity}</span>
+                      <span className={`severity-badge ${vuln.severity.toLowerCase()}`}>{vuln.severity === 'Minor' ? 'Medium' : vuln.severity === 'Simple' ? 'Low' : vuln.severity}</span>
                       <span className="vuln-cve">{vuln.id}</span>
                     </div>
                     <div className="vuln-details">
