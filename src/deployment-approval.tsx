@@ -86,6 +86,46 @@ export default function DeploymentApproval() {
     setEditingCommentId(null);
     setEditContent('');
   };
+
+  // 코드 분석 취약점 데이터
+  const codeVulns = [
+    {
+      id: 'CVE-2024-1234',
+      severity: 'Minor',
+      file: 'src/components/Button.tsx',
+      line: 15,
+      description: 'Unused variable in component props',
+      type: 'Code Quality'
+    },
+    {
+      id: 'CVE-2024-5678',
+      severity: 'Simple',
+      file: 'src/utils/helpers.ts',
+      line: 42,
+      description: 'Missing type definition for function parameter',
+      type: 'TypeScript'
+    }
+  ];
+  // 이미지 분석 취약점 데이터
+  const imageVulns = [
+    {
+      id: 'CVE-2024-1234',
+      severity: 'Critical',
+      package: 'openssl',
+      version: '1.1.1',
+      description: 'Remote code execution vulnerability in OpenSSL',
+      affected: 'Base image'
+    },
+    {
+      id: 'CVE-2024-5678',
+      severity: 'High',
+      package: 'nginx',
+      version: '1.18.0',
+      description: 'Buffer overflow vulnerability in HTTP/2 implementation',
+      affected: 'Web server'
+    }
+  ];
+
   return (
     <div className="github-bg">
       <header className="github-header">

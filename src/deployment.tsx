@@ -1,6 +1,9 @@
 import React from 'react';
 
+import { useRouter } from 'next/router';
+
 export default function Deployment() {
+  const router = useRouter();
   return (
     <div className="github-bg">
       <header className="github-header">

@@ -1,6 +1,8 @@
 import React from 'react';
+import { useRouter } from 'next/router';
 
-export default function Deployment() {
+export default function ImageBuild() {
+  const router = useRouter();
   return (
     <div className="github-bg">
       <header className="github-header">
@@ -31,21 +33,28 @@ export default function Deployment() {
       </header>
       <main className="main-container-flex" style={{ position: 'relative' }}>
         <div className="main-content-left">
-          <h1 className="main-title">Deployment Details</h1>
-          <div className="deploy-card">
-            <div><b>Environment:</b> Production</div>
-            <div><b>Deployed At:</b> 2024-05-01 16:00:00</div>
-            <div><b>Status:</b> <span className="deploy-fail">Fail</span></div>
-            <div className="deploy-log-title"><b>Deploy Log:</b></div>
-            <pre className="deploy-log">
-[16:00:00] Starting deployment...
-[16:00:05] Pulling image my-app:1.0.3
-[16:00:10] Updating containers
-[16:00:15] Health check passed
-[16:00:20] Deployment finished successfully
+          <h1 className="main-title">Image Build Details</h1>
+          <div className="build-card">
+            <div><b>Image Tag:</b> my-app:1.0.3</div>
+            <div><b>Build Time:</b> 2025-05-13 14:23:10</div>
+            <div><b>Status:</b> <span className="build-success">Success</span></div>
+            <div className="build-log-title"><b>Build Log:</b></div>
+            <pre className="build-log">
+Step 1/5 : FROM node:18-alpine
+ {'-->'} 2c624b1
+Step 2/5 : COPY . /app
+ {'-->'} Using cache
+Step 3/5 : RUN npm install
+ {'-->'} Running in 1a2b3c
+Step 4/5 : RUN npm run build
+ {'-->'} Running in 1a2b3c
+Step 5/5 : CMD ["node", "server.js"]
+ {'-->'} Built successfully
             </pre>
-
           </div>
+          <div className="next-btn-container">
+  <button className="next-btn" onClick={() => router.push('/image-analysis')}>Next</button>
+</div>
         </div>
       </main>
       <style jsx>{`
@@ -64,15 +73,30 @@ export default function Deployment() {
         .main-container-flex { max-width: 1600px; min-height: 750px; margin: 64px auto 0 auto; background: #0d1117; border-radius: 16px; box-shadow: 0 2px 16px rgba(0,0,0,0.3); padding: 56px 120px 64px 120px; display: flex; flex-direction: row; gap: 64px; }
         .main-content-left { flex: 2; min-width: 0; }
         .main-title { font-size: 2.2rem; font-weight: bold; margin-bottom: 24px; text-align: left; }
-        .deploy-card { background: #181c20; border-radius: 12px; padding: 32px 28px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); font-size: 1.08rem; }
-        .deploy-success { color: #238636; font-weight: bold; }
-        .deploy-fail { color: #f85149; font-weight: bold; }
-        .deploy-log-title { margin-top: 18px; margin-bottom: 6px; }
-        .deploy-log { background: #23272e; color: #b3bfc9; border-radius: 8px; padding: 14px; font-size: 0.98rem; overflow-x: auto; }
-        .deploy-back-btn { margin-top: 18px; background: #2386f2; color: #fff; border: none; border-radius: 8px; padding: 12px 32px; font-size: 1.08rem; font-weight: 600; cursor: pointer; transition: background 0.15s; }
-        .deploy-back-btn:hover { background: #1c6ed2; }
-        .docker-analysis-btn { margin-top: 12px; margin-left: 10px; background: #238636; color: #fff; border: none; border-radius: 8px; padding: 12px 32px; font-size: 1.08rem; font-weight: 600; cursor: pointer; transition: background 0.15s; }
-        .docker-analysis-btn:hover { background: #19692c; }
+        .build-card { background: #181c20; border-radius: 12px; padding: 32px 28px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); font-size: 1.08rem; }
+        .build-success { color: #238636; font-weight: bold; }
+        .build-fail { color: #f85149; font-weight: bold; }
+        .build-log-title { margin-top: 18px; margin-bottom: 6px; }
+        .build-log { background: #23272e; color: #b3bfc9; border-radius: 8px; padding: 14px; font-size: 0.98rem; overflow-x: auto; }
+        .next-btn-container {
+  display: flex;
+  justify-content: flex-end;
+}
+.next-btn {
+          margin-top: 12px;
+          background: #2386f2;
+          color: #fff;
+          border: none;
+          border-radius: 6px;
+          padding: 10px 32px;
+          font-size: 1.1rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background 0.15s;
+        }
+        .next-btn:hover {
+          background: #1c6ed2;
+        }
       `}</style>
     </div>
   );
