@@ -39,18 +39,7 @@ export default function ImageBuild() {
             <div><b>Build Time:</b> 2025-05-13 14:23:10</div>
             <div><b>Status:</b> <span className="build-success">Success</span></div>
             <div className="build-log-title"><b>Build Log:</b></div>
-            <pre className="build-log">
-Step 1/5 : FROM node:18-alpine
- {'-->'} 2c624b1
-Step 2/5 : COPY . /app
- {'-->'} Using cache
-Step 3/5 : RUN npm install
- {'-->'} Running in 1a2b3c
-Step 4/5 : RUN npm run build
- {'-->'} Running in 1a2b3c
-Step 5/5 : CMD ["node", "server.js"]
- {'-->'} Built successfully
-            </pre>
+
           </div>
           <div className="next-btn-container">
   <button className="next-btn" onClick={() => router.push('/image-analysis')}>Next</button>
