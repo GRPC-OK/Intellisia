@@ -72,10 +72,15 @@ export default function ProjectDetail() {
         // 받아온 데이터로 상태 업데이트
         setProject(data);
 
-      } catch (err: any) {
+      } catch (err: unknown) {
         // API 요청 중 발생한 예외 처리
-        console.error("프로젝트 상세 정보 가져오기 실패:", err);
-        setError(err.message || "프로젝트 정보를 가져오는 중 알 수 없는 오류 발생"); // 오류 상태 업데이트
+        if (err instanceof Error) {
+          console.error("프로젝트 상세 정보 가져오기 실패:", err);
+          setError(err.message || "프로젝트 정보를 가져오는 중 알 수 없는 오류 발생"); // 오류 상태 업데이트
+        } else {
+          console.error("프로젝트 상세 정보 가져오기 실패: 알 수 없는 오류", err);
+          setError("프로젝트 정보를 가져오는 중 알 수 없는 오류 발생"); // 오류 상태 업데이트
+        }
         setProject(null); // 오류 발생 시 프로젝트 데이터 초기화
 
       } finally {
