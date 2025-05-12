@@ -1,6 +1,8 @@
 import React from "react";
 import { useRouter } from "next/router";
 import styles from "../styles/Dashboard.module.css";
+import Image from 'next/image';
+
 
 // 프로젝트 상태별 아이콘 컴포넌트
 const StatusIcon = ({ status }: { status: string }) => {
@@ -95,7 +97,15 @@ export default function Dashboard() {
               onClick={() => handleProjectDetail(project.name)}
               title="상세 페이지로 이동"
             >
-              <img src={project.icon} alt={project.name} className={styles.projectIcon} />
+              <Image
+                src={project.icon}
+                alt={project.name}
+                className={styles.projectIcon}
+                width={40} // 예시 크기, 디자인에 맞게 조정
+                height={40} // 예시 크기, 디자인에 맞게 조정
+                // layout="responsive" // 부모 요소에 맞춰 크기 조절 시 사용 (width/height 필수)
+                // objectFit="cover" // layout="responsive" 사용 시 이미지 비율 유지
+                />
               <div className={styles.projectInfo}>
                 <div className={styles.projectName}>{project.name}</div>
                 <div className={styles.projectPath}>{project.path}</div>
