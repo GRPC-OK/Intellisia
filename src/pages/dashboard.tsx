@@ -16,7 +16,7 @@ const StatusIcon = ({ status }: { status: string }) => {
 // 예시 프로젝트 데이터 (상태, 동기화, 헬스, 최근 배포 로그 등 포함)
 const projects = [
   {
-    name: "Website",
+    name: "Project 1",
     path: "acme-ai/website",
     size: "2.5MB",
     icon: "https://cdn-icons-png.flaticon.com/512/1055/1055687.png",
@@ -26,7 +26,7 @@ const projects = [
     lastLog: "2024-06-01 14:22:10 배포 성공"
   },
   {
-    name: "API",
+    name: "Project 2",
     path: "acme-ai/website",
     size: "1.2MB",
     icon: "https://cdn-icons-png.flaticon.com/512/1055/1055672.png",
@@ -36,7 +36,7 @@ const projects = [
     lastLog: "2024-06-01 13:10:05 승인 대기"
   },
   {
-    name: "Docs",
+    name: "Project 3",
     path: "acme-ai/website",
     size: "3.1MB",
     icon: "https://cdn-icons-png.flaticon.com/512/1055/1055676.png",
