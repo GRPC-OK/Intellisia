@@ -1,8 +1,9 @@
 import Image from 'next/image';
+import { User } from '@/types/project';
 
 interface ContributorsAvatarsProps {
-  contributors: { id: string; name: string; avatar?: string }[];
-  size?: number;
+  contributors: User[];
+  size?: number; // 기본값 : 32
 }
 
 export default function ContributorsAvatars({
@@ -10,26 +11,19 @@ export default function ContributorsAvatars({
   size = 32,
 }: ContributorsAvatarsProps) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6em' }}>
+    <div className="flex items-center gap-[0.6em]">
       {contributors.map((c) => (
         <div
           key={c.id}
+          className="rounded-full border-[0.15em] border-[#181A20] bg-[#23272F] overflow-hidden z-[1] flex items-center justify-center"
           style={{
-            width: size,
-            height: size,
-            borderRadius: '9999px',
-            border: '0.15em solid #181A20',
-            background: '#23272F',
-            overflow: 'hidden',
+            width: `${size}px`,
+            height: `${size}px`,
             marginLeft: 0,
-            zIndex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
           }}
         >
           <Image
-            src={c.avatar || '/img/default_project_img.png'}
+            src={c.avatarUrl || '/img/default_project_img.png'}
             alt={c.name}
             width={size}
             height={size}
