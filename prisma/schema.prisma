@@ -1,0 +1,42 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+
+
+datasource db {
+  provider = "postgresql" // 사용 중인 DB 프로바이더 확인
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 예시: 프로젝트 정보를 저장할 'Project' 모델 정의
+model Project {
+  id         Int      @id @default(autoincrement()) // 기본 키, 자동 증가 정수
+  name       String   @unique // 프로젝트 이름 (고유해야 함)
+  path       String
+  size       String? // null 허용 가능 필드는 타입 뒤에 '?' 붙임
+  icon       String?
+  status     String
+  sync       String
+  health     String
+  lastLog    String?
+  createdAt  DateTime @default(now()) // 생성 시간 (기본값: 현재 시간)
+  updatedAt  DateTime @updatedAt // 업데이트 시간 (업데이트 시 자동 갱신)
+
+  @@map("projects") // 실제 DB 테이블 이름을 'projects'로 지정 (모델 이름과 다를 수 있음)
+}
+
+
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}

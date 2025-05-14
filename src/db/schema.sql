@@ -1,0 +1,14 @@
+-- 프로젝트 테이블 생성
+CREATE TABLE IF NOT EXISTS projects (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    path VARCHAR(255) NOT NULL,
+    size VARCHAR(50),
+    icon VARCHAR(255),
+    status VARCHAR(50) NOT NULL,
+    sync VARCHAR(50) NOT NULL,
+    health VARCHAR(50) NOT NULL,
+    last_log TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+); 

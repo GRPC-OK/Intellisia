@@ -6,10 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "seed": "npm run build:seed && node dist/seed.js",
+    "build:seed": "tsc prisma/seed.ts --outDir dist"
   },
   "dependencies": {
+    "@prisma/client": "^6.7.0",
+    "@types/pg": "^8.15.1",
     "next": "15.3.2",
+    "pg": "^8.15.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -25,6 +30,8 @@
     "eslint-plugin-react": "^7.37.5",
     "globals": "^16.1.0",
     "prettier": "^3.5.3",
+    "prisma": "^6.7.0",
+    "ts-node": "^10.9.2",
     "typescript": "^5",
     "typescript-eslint": "^8.32.0"
   }
