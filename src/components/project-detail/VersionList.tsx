@@ -1,34 +1,26 @@
-import React from 'react';
-import { Version } from '@/types/project';
 import VersionCard from './VersionCard';
+import type { VersionSummary } from '@/types/project';
 
 interface VersionListProps {
-  versions: Version[];
-  onVersionClick: (version: Version) => void;
+  versions: (VersionSummary & { onClick?: () => void })[];
+  onVersionClick?: (version: VersionSummary) => void;
 }
 
-const VersionList: React.FC<VersionListProps> = ({
+export default function VersionList({
   versions,
   onVersionClick,
-}) => {
+}: VersionListProps) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1.5em',
-        width: '100%',
-      }}
-    >
+    <div className="flex flex-col gap-4 w-full">
       {versions.map((version) => (
         <VersionCard
-          key={version.id}
-          version={version}
-          onClick={() => onVersionClick(version)}
+          key={version.name}
+          name={version.name}
+          description={version.description}
+          isCurrent={version.isCurrent}
+          onClick={() => onVersionClick?.(version)}
         />
       ))}
     </div>
   );
-};
-
-export default VersionList;
+}
