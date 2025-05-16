@@ -1,11 +1,10 @@
 import Image from 'next/image';
-import { User } from '@/types/project';
+import { Contributor } from '@/types/project';
 
 interface ContributorsAvatarsProps {
-  contributors: User[];
-  size?: number; // 기본값 : 32
+  contributors: Contributor[];
+  size?: number;
 }
-
 export default function ContributorsAvatars({
   contributors,
   size = 32,

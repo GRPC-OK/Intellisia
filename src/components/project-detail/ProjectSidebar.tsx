@@ -1,10 +1,10 @@
 import Link from 'next/link';
 import ContributorsAvatars from './ContributorsAvatars';
-import { Project } from '@/types/project';
+import { ProjectDetail } from '@/types/project';
 import { format, formatDistanceToNow } from 'date-fns';
 
 interface ProjectSidebarProps {
-  project: Project;
+  project: ProjectDetail;
 }
 
 function formatDate(dateStr: string) {
