@@ -17,6 +17,7 @@ export const getVersionStatusById = async (versionId: number) => {
     where: { id: versionId },
     select: {
       id: true,
+      name: true,
       flowStatus: true,
       codeStatus: true,
       buildStatus: true,

@@ -10,6 +10,7 @@ export const getVersionFlowStatus = async (
   return {
     versionId: version.id,
     flowStatus: version.flowStatus,
+    versionName: version.name,
     statuses: {
       code: version.codeStatus,
       build: version.buildStatus,

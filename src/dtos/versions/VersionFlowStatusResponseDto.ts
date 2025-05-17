@@ -1,5 +1,6 @@
 export interface VersionFlowStatusResponseDto {
   versionId: number;
+  versionName: string;
   flowStatus: string;
   statuses: {
     code: string;
