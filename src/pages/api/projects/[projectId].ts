@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getProjectDetail } from '@/services/project/getProjectDetail';
+import { getProjectDetail } from '@/services/project.service';
 
 export default async function handler(
   req: NextApiRequest,
