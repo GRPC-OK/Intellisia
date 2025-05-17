@@ -21,7 +21,7 @@ export interface ProjectDetail {
   domain: string;
   createdAt: string;
   updatedAt: string;
-  createdBy: Contributor;
+  owner: Contributor;
   contributors: Contributor[];
   versions: VersionSummary[];
 }
