@@ -1,6 +1,6 @@
 import prisma from '@/lib/prisma';
 
-export async function getProjectById(projectId: number) {
+export const getProjectById = async (projectId: number) => {
   return prisma.project.findUnique({
     where: { id: projectId },
     include: {
@@ -10,4 +10,4 @@ export async function getProjectById(projectId: number) {
       },
     },
   });
-}
+};

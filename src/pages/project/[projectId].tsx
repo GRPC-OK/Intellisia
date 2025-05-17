@@ -18,17 +18,19 @@ export default function ProjectDetailPage() {
   const [versions, setVersions] = useState<VersionSummary[]>([]);
   const [sort, setSort] = useState<'newest' | 'oldest'>('oldest');
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   useEffect(() => {
-    if (!projectId) return;
+    if (typeof projectId !== 'string') return;
 
     const fetchProject = async () => {
-      setLoading(true);
+      if (initialLoading) setLoading(true);
       const res = await fetch(`/api/projects/${projectId}?sort=${sort}`);
       const data = await res.json();
       setProject(data);
       setVersions(data.versions);
       setLoading(false);
+      setInitialLoading(false);
     };
 
     fetchProject();
@@ -51,7 +53,7 @@ export default function ProjectDetailPage() {
         <div className="flex-1 flex flex-col gap-6">
           <ProjectHeader
             projectName={project.name}
-            creatorName={project.createdBy.name}
+            creatorName={project.owner.name}
           />
 
           {/* 버튼 오른쪽 정렬 */}

@@ -1,9 +1,18 @@
+-- CreateEnum
+CREATE TYPE "StepStatus" AS ENUM ('none', 'pending', 'success', 'fail');
+
+-- CreateEnum
+CREATE TYPE "ApproveStatus" AS ENUM ('none', 'pending', 'approved', 'rejected');
+
+-- CreateEnum
+CREATE TYPE "FlowStatus" AS ENUM ('none', 'pending', 'success', 'fail');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
     "email" TEXT NOT NULL,
-    "avatarUrl" TEXT,
+    "avatarUrl" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -20,6 +29,7 @@ CREATE TABLE "Project" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "ownerId" INTEGER NOT NULL,
+    "defaultHelmValues" JSONB,
 
     CONSTRAINT "Project_pkey" PRIMARY KEY ("id")
 );
@@ -42,12 +52,29 @@ CREATE TABLE "Version" (
     "imageTag" TEXT NOT NULL,
     "branch" TEXT NOT NULL,
     "commitHash" TEXT NOT NULL,
+    "applicationName" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "codeStatus" "StepStatus" NOT NULL DEFAULT 'none',
+    "buildStatus" "StepStatus" NOT NULL DEFAULT 'none',
+    "imageStatus" "StepStatus" NOT NULL DEFAULT 'none',
+    "deployStatus" "StepStatus" NOT NULL DEFAULT 'none',
+    "approveStatus" "ApproveStatus" NOT NULL DEFAULT 'none',
+    "flowStatus" "FlowStatus" NOT NULL DEFAULT 'none',
+    "helmValuesId" INTEGER,
     "projectId" INTEGER NOT NULL,
     "authorId" INTEGER NOT NULL,
 
     CONSTRAINT "Version_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "HelmValues" (
+    "id" SERIAL NOT NULL,
+    "content" JSONB NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "HelmValues_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -60,6 +87,9 @@ CREATE UNIQUE INDEX "Project_domain_key" ON "Project"("domain");
 CREATE UNIQUE INDEX "ProjectContributors_userId_projectId_key" ON "ProjectContributors"("userId", "projectId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Version_helmValuesId_key" ON "Version"("helmValuesId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Version_projectId_name_key" ON "Version"("projectId", "name");
 
 -- AddForeignKey
@@ -70,6 +100,9 @@ ALTER TABLE "ProjectContributors" ADD CONSTRAINT "ProjectContributors_userId_fke
 
 -- AddForeignKey
 ALTER TABLE "ProjectContributors" ADD CONSTRAINT "ProjectContributors_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Version" ADD CONSTRAINT "Version_helmValuesId_fkey" FOREIGN KEY ("helmValuesId") REFERENCES "HelmValues"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Version" ADD CONSTRAINT "Version_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

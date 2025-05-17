@@ -24,7 +24,7 @@ export function toProjectDetailDto(
     domain: project.domain,
     createdAt: project.createdAt.toISOString(),
     updatedAt: project.updatedAt.toISOString(),
-    createdBy: {
+    owner: {
       id: project.owner.id,
       name: project.owner.name,
       avatarUrl: project.owner.avatarUrl,
@@ -34,12 +34,10 @@ export function toProjectDetailDto(
       name: c.user.name,
       avatarUrl: c.user.avatarUrl,
     })),
-    versions: versions.map(
-      (v): VersionSummary => ({
-        name: v.name,
-        description: v.description,
-        isCurrent: v.isCurrent,
-      })
-    ),
+    versions: versions.map((v) => ({
+      name: v.name,
+      description: v.description,
+      isCurrent: v.isCurrent,
+    })),
   };
 }

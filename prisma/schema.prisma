@@ -7,34 +7,41 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User{
-  id Int @id @default(autoincrement())
-  name String
-  email String @unique
+// 사용자
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
   avatarUrl String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
-  projects Project[] @relation("ProjectOwner")
-  versions Version[]
+
+  projects      Project[]             @relation("ProjectOwner")
+  versions      Version[]
   contributions ProjectContributors[]
 }
 
+// 프로젝트 
 model Project {
-  id Int @id @default(autoincrement())
-  name String
+  id          Int      @id @default(autoincrement())
+  name        String
   description String
-  githubUrl String
-  domain String @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  githubUrl   String
+  domain      String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   owner   User @relation("ProjectOwner", fields: [ownerId], references: [id])
   ownerId Int
 
   contributors ProjectContributors[]
   versions     Version[]
+
+  // 프로젝트의 기본 Helm values 
+  defaultHelmValues Json?
 }
 
+// 프로젝트 기여자 
 model ProjectContributors {
   id        Int     @id @default(autoincrement())
   user      User    @relation(fields: [userId], references: [id])
@@ -45,22 +52,68 @@ model ProjectContributors {
   @@unique([userId, projectId])
 }
 
+// ==================== 버전 ====================
 model Version {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String
-  isCurrent   Boolean  @default(false)
-  imageTag    String
-  branch      String
-  commitHash  String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              Int     @id @default(autoincrement())
+  name            String
+  description     String
+  isCurrent       Boolean @default(false)
+  imageTag        String
+  branch          String
+  commitHash      String
+  applicationName String
 
-  project     Project  @relation(fields: [projectId], references: [id])
-  projectId   Int
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 상태 필드
+  codeStatus    StepStatus    @default(none)
+  buildStatus   StepStatus    @default(none)
+  imageStatus   StepStatus    @default(none)
+  deployStatus  StepStatus    @default(none)
+  approveStatus ApproveStatus @default(none)
+  flowStatus    FlowStatus    @default(none)
+
+  helmValues   HelmValues? @relation(name: "VersionHelmRelation", fields: [helmValuesId], references: [id])
+  helmValuesId Int?        @unique
+
+  // Project 연결
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId Int
+
+  // 작성자
   author   User @relation(fields: [authorId], references: [id])
   authorId Int
 
-  @@unique([projectId, name]) // 중복 이름 방지
+  @@unique([projectId, name])
+}
+
+model HelmValues {
+  id        Int      @id @default(autoincrement())
+  content   Json
+  createdAt DateTime @default(now())
+
+  version Version? @relation(name: "VersionHelmRelation")
+}
+
+// ==================== enum ====================
+enum StepStatus {
+  none
+  pending
+  success
+  fail
+}
+
+enum ApproveStatus {
+  none
+  pending
+  approved
+  rejected
+}
+
+enum FlowStatus {
+  none
+  pending
+  success
+  fail
 }

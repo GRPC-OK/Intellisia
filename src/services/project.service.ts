@@ -1,12 +1,12 @@
-import { getProjectById } from '@/repositories/project/getProjectById';
-import { getVersionsByProject } from '@/repositories/version/getVersionsByProject';
+import { getProjectById } from '@/repositories/project.repository';
+import { getVersionsByProject } from '@/repositories/version.repository';
 import { toProjectDetailDto } from '@/dtos/project/toProjectDetailDto';
 import { VersionSummary } from '@/types/project';
 
-export async function getProjectDetail(
+export const getProjectDetail = async (
   projectId: number,
   sort: 'asc' | 'desc'
-) {
+) => {
   const project = await getProjectById(projectId);
   if (!project) return null;
 
@@ -14,5 +14,6 @@ export async function getProjectDetail(
     projectId,
     sort
   );
+
   return toProjectDetailDto(project, versions);
-}
+};
