@@ -52,8 +52,8 @@ export default function CreateProjectPageDark() {
         if (!repository.startsWith('https://') && !repository.startsWith('http://')) {
           currentFieldErrors.repository = "Git 저장소 URL은 http:// 또는 https:// 로 시작해야 합니다.";
         }
-      } catch (parseError) { // '_' 대신 'parseError' 사용 (또는 다른 의미있는 이름)
-        // console.warn('Repository URL parsing error:', parseError); // 필요한 경우 에러 로깅
+      } catch (parseError) {
+        console.warn('Repository URL parsing error:', parseError); // parseError 변수 사용
         currentFieldErrors.repository = "유효한 URL 형식이 아닙니다.";
       }
     }
@@ -64,8 +64,8 @@ export default function CreateProjectPageDark() {
         if (!githubUrl.startsWith('https://') && !githubUrl.startsWith('http://')) {
           currentFieldErrors.githubUrl = "GitHub URL은 http:// 또는 https:// 로 시작해야 합니다.";
         }
-      } catch (parseError) { // '_' 대신 'parseError' 사용
-        // console.warn('GitHub URL parsing error:', parseError); // 필요한 경우 에러 로깅
+      } catch (parseError) {
+        console.warn('GitHub URL parsing error:', parseError); // parseError 변수 사용
         currentFieldErrors.githubUrl = "유효한 GitHub URL 형식이 아닙니다.";
       }
     }
@@ -124,6 +124,8 @@ export default function CreateProjectPageDark() {
       }
 
       alert('프로젝트가 성공적으로 생성 요청되었습니다!');
+      // 현재 날짜와 시간을 포함하여 성공 메시지를 더 명확하게 할 수 있습니다.
+      // 예: alert(`프로젝트가 성공적으로 생성 요청되었습니다! (${new Date().toLocaleString()})`);
       router.push('/projects');
 
     } catch (err: unknown) { // err 타입을 unknown으로 지정
