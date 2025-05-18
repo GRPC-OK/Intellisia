@@ -1,100 +1,129 @@
+// Prisma Client JS 생성기 지정
 generator client {
   provider = "prisma-client-js"
 }
 
+// 데이터베이스 연결 설정 (PostgreSQL, DATABASE_URL 환경 변수 사용)
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL") // .env 파일에서 설정할 것입니다.
+  url      = env("DATABASE_URL")
 }
 
-// 사용자
+// 사용자 모델
 model User {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
-  avatarUrl String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        Int      @id @default(autoincrement()) // 사용자 ID (PK, 자동 증가)
+  name      String   // 이름
+  email     String   @unique // 이메일 (고유 값)
+  avatarUrl String   // 아바타 URL
+  createdAt DateTime @default(now()) // 생성 시각 (기본값: 현재 시각)
+  updatedAt DateTime @updatedAt // 최종 수정 시각 (자동 업데이트)
 
-  projects      Project[]             @relation("ProjectOwner")
-  versions      Version[]
-  contributions ProjectContributors[]
+  projects      Project[]             @relation("ProjectOwner") // 소유 프로젝트 (1:N 관계, User-Project)
+  versions      Version[]             // 작성 버전 (1:N 관계, User-Version)
+  contributions ProjectContributors[] // 참여 기여 (1:N 관계, User-ProjectContributors)
 }
 
-// 프로젝트
+// 프로젝트 모델
 model Project {
-  id                Int      @id @default(autoincrement())
-  name              String
-  namespace         String
-  description       String
-  repository        String   @unique
-  githubUrl         String
-  domain            String   @unique
-  cpuMemory         String   // 예: "small", "medium", "large"
-  replicas          Int
-  ingressConfig     Json?
-  serviceConfig     Json?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id            Int      @id @default(autoincrement()) // 프로젝트 ID (PK, 자동 증가)
+  name          String   // 프로젝트명
+  namespace     String   // 네임스페이스
+  description   String   // 설명
+  repository    String   @unique // Git 저장소 주소 (고유 값)
+  githubUrl     String   // GitHub URL
+  domain        String   @unique // 배포 도메인 (고유 값)
+  serviceConfig Json?    // 서비스 추가 설정 (JSON, 선택 사항)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  owner             User     @relation("ProjectOwner", fields: [ownerId], references: [id])
-  ownerId           Int
+  owner         User     @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Restrict, onUpdate: Cascade) // 소유자 (N:1 관계, Project-User), ownerId 외래 키
+  ownerId       Int      // 소유자 User ID (FK)
 
   contributors      ProjectContributors[]
   versions          Version[]
-  defaultHelmValues Json?
+  defaultHelmValues Json?                 // 프로젝트 기본 Helm 값 (JSON, 선택 사항)
+
+  resourceConfig ProjectResourceConfig? // 프로젝트 리소스 설정 (1:1 관계, Project-ProjectResourceConfig, 선택 사항)
 }
 
-// 프로젝트 기여자
+// 프로젝트 리소스 설정 모델
+model ProjectResourceConfig {
+  id            Int             @id @default(autoincrement()) // 리소스 설정 ID (PK, 자동 증가)
+  cpuMemory     CpuMemoryPreset @default(MEDIUM) // CPU/메모리 프리셋 (Enum 타입)
+  replicas      Int             @default(1)    // 복제본 수 (기본값: 1)
+  ingressConfig Json?           // Ingress 설정 (JSON, 선택 사항)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: Cascade) // 연결된 프로젝트 (1:1 관계), projectId 외래 키
+  projectId Int     @unique // 프로젝트 ID (FK, 고유 값으로 1:1 관계 강제)
+}
+
+// 프로젝트 기여자 모델 (User-Project 간 다대다 관계 조인 테이블)
 model ProjectContributors {
-  id        Int     @id @default(autoincrement())
-  user      User    @relation(fields: [userId], references: [id])
-  userId    Int
-  project   Project @relation(fields: [projectId], references: [id])
-  projectId Int
+  id        Int @id @default(autoincrement()) // 기여자 항목 ID (PK, 자동 증가)
 
-  @@unique([userId, projectId])
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade) // 기여자 (N:1 관계), userId 외래 키
+  userId Int  // 기여자 User ID (FK)
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: Cascade) // 참여 프로젝트 (N:1 관계), projectId 외래 키
+  projectId Int     // 프로젝트 ID (FK)
+
+  @@unique([userId, projectId]) // 사용자-프로젝트 조합은 고유해야 함
 }
 
-// 버전
+// 버전 모델
 model Version {
-  id                Int      @id @default(autoincrement())
-  name              String
-  description       String
-  isCurrent         Boolean  @default(false)
-  imageTag          String
-  branch            String
-  commitHash        String
-  applicationName   String
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id              Int      @id @default(autoincrement()) // 버전 ID (PK, 자동 증가)
+  name            String   // 버전명
+  description     String   // 설명
+  isCurrent       Boolean  @default(false) // 현재 배포 버전 여부 (기본값: false)
+  imageTag        String   // 컨테이너 이미지 태그
+  branch          String   // Git 브랜치
+  commitHash      String   // Git 커밋 해시
+  applicationName String   // 애플리케이션 이름
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  codeStatus        StepStatus    @default(none)
-  buildStatus       StepStatus    @default(none)
-  imageStatus       StepStatus    @default(none)
-  deployStatus      StepStatus    @default(none)
-  approveStatus     ApproveStatus @default(none)
-  flowStatus        FlowStatus    @default(none)
+  // 상태 필드 (각 단계/승인/전체 흐름의 현재 상태를 나타냄, Enum 타입 사용)
+  codeStatus    StepStatus    @default(none) // 코드 단계 상태
+  buildStatus   StepStatus    @default(none) // 빌드 단계 상태
+  imageStatus   StepStatus    @default(none) // 이미지 단계 상태
+  deployStatus  StepStatus    @default(none) // 배포 단계 상태
+  approveStatus ApproveStatus @default(none) // 승인 상태
+  flowStatus    FlowStatus    @default(none) // 전체 흐름 상태
 
-  helmValues        HelmValues?   @relation(name: "VersionHelmRelation", fields: [helmValuesId], references: [id])
-  helmValuesId      Int?          @unique
+  helmValues   HelmValues? @relation(name: "VersionHelmRelation", fields: [helmValuesId], references: [id], onDelete: SetNull, onUpdate: Cascade) // 버전별 Helm 값 (1:1 관계, 선택 사항), helmValuesId 외래 키
+  helmValuesId Int?        @unique // HelmValues ID (FK, 고유 값으로 1:1 관계, 선택 사항)
 
-  project           Project       @relation(fields: [projectId], references: [id])
-  projectId         Int
-  author            User          @relation(fields: [authorId], references: [id])
-  authorId          Int
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: Cascade) // 소속 프로젝트 (N:1 관계), projectId 외래 키
+  projectId Int     // 프로젝트 ID (FK)
 
-  @@unique([projectId, name])
+  author   User?  @relation(fields: [authorId], references: [id], onDelete: SetNull, onUpdate: Cascade) // 작성자 (N:1 관계, 선택 사항), authorId 외래 키
+  authorId Int?   // 작성자 User ID (FK, 선택 사항)
+
+  @@unique([projectId, name]) // 프로젝트 내 버전 이름은 고유해야 함
 }
 
+// 버전별 Helm Values 모델
 model HelmValues {
-  id        Int      @id @default(autoincrement())
-  content   Json
+  id        Int      @id @default(autoincrement()) // Helm 값 ID (PK, 자동 증가)
+  content   Json     // Helm values 내용 (JSON)
   createdAt DateTime @default(now())
-  version   Version? @relation(name: "VersionHelmRelation")
+
+  version Version? @relation(name: "VersionHelmRelation") // 연결된 버전 (1:1 관계의 역방향)
 }
 
-// Enum 타입들
+// Enum 타입들 (미리 정의된 값들의 집합)
+
+// CPU/메모리 프리셋 옵션
+enum CpuMemoryPreset {
+  SMALL
+  MEDIUM
+  LARGE
+}
+
+// 배포 단계별 상태 옵션
 enum StepStatus {
   none
   pending
@@ -102,6 +131,7 @@ enum StepStatus {
   fail
 }
 
+// 승인 상태 옵션
 enum ApproveStatus {
   none
   pending
@@ -109,6 +139,7 @@ enum ApproveStatus {
   rejected
 }
 
+// 전체 배포 흐름 상태 옵션
 enum FlowStatus {
   none
   pending
