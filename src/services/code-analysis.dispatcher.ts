@@ -10,8 +10,12 @@ export async function triggerSemgrepWorkflow({
   const [owner, repo] = new URL(repoUrl).pathname.slice(1).split('/');
   const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/versions/${versionId}/code-analysis`;
 
+  const PLATFORM_WORKFLOW_OWNER = process.env.WORKFLOW_REPO_OWNER!;
+  const PLATFORM_WORKFLOW_REPO = process.env.WORKFLOW_REPO_NAME!;
+  const PLATFORM_WORKFLOW_REF = process.env.WORKFLOW_REF!;
+
   const res = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/actions/workflows/semgrep.yml/dispatches`,
+    `https://api.github.com/repos/${PLATFORM_WORKFLOW_OWNER}/${PLATFORM_WORKFLOW_REPO}/actions/workflows/semgrep.yml/dispatches`,
     {
       method: 'POST',
       headers: {
@@ -19,7 +23,7 @@ export async function triggerSemgrepWorkflow({
         Accept: 'application/vnd.github+json',
       },
       body: JSON.stringify({
-        ref: 'hyewon/code-analysis-backend',
+        ref: PLATFORM_WORKFLOW_REF,
         inputs: {
           versionId: versionId.toString(),
           callbackUrl,
