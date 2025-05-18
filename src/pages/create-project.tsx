@@ -3,7 +3,19 @@ import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/router';
 import { CPU_MEMORY_OPTIONS, type CpuMemoryOption } from '@/dtos/project/CreateProjectDto'; // 예시 경로
 
-export default function CreateProjectPageDark() { // 컴포넌트 이름에 Dark 테마 명시 (선택 사항)
+// 프로젝트 데이터의 타입을 정의하는 인터페이스
+interface ProjectData {
+  name: string;
+  repository: string;
+  description?: string;
+  namespace?: string;
+  githubUrl?: string;
+  customDomain?: string;
+  cpuMemory?: CpuMemoryOption | '';
+  replicas?: number;
+}
+
+export default function CreateProjectPageDark() {
   const router = useRouter();
 
   const [projectName, setProjectName] = useState('');
@@ -40,7 +52,8 @@ export default function CreateProjectPageDark() { // 컴포넌트 이름에 Dark
         if (!repository.startsWith('https://') && !repository.startsWith('http://')) {
           currentFieldErrors.repository = "Git 저장소 URL은 http:// 또는 https:// 로 시작해야 합니다.";
         }
-      } catch (_) {
+      } catch (parseError) { // '_' 대신 'parseError' 사용 (또는 다른 의미있는 이름)
+        // console.warn('Repository URL parsing error:', parseError); // 필요한 경우 에러 로깅
         currentFieldErrors.repository = "유효한 URL 형식이 아닙니다.";
       }
     }
@@ -51,7 +64,8 @@ export default function CreateProjectPageDark() { // 컴포넌트 이름에 Dark
         if (!githubUrl.startsWith('https://') && !githubUrl.startsWith('http://')) {
           currentFieldErrors.githubUrl = "GitHub URL은 http:// 또는 https:// 로 시작해야 합니다.";
         }
-      } catch (_) {
+      } catch (parseError) { // '_' 대신 'parseError' 사용
+        // console.warn('GitHub URL parsing error:', parseError); // 필요한 경우 에러 로깅
         currentFieldErrors.githubUrl = "유효한 GitHub URL 형식이 아닙니다.";
       }
     }
@@ -61,7 +75,7 @@ export default function CreateProjectPageDark() { // 컴포넌트 이름에 Dark
         currentFieldErrors.customDomain = "유효한 도메인 형식이 아닙니다. (예: myproject.example.com)";
       }
     }
-    
+
     if (namespace.trim() && namespace.length > 63) {
       currentFieldErrors.namespace = "네임스페이스는 63자를 초과할 수 없습니다.";
     }
@@ -77,7 +91,8 @@ export default function CreateProjectPageDark() { // 컴포넌트 이름에 Dark
       return;
     }
 
-    const projectData: any = {
+    // 정의된 ProjectData 인터페이스를 사용하여 타입 명시
+    const projectData: ProjectData = {
       name: projectName.trim(),
       repository: repository.trim(),
     };
@@ -94,42 +109,53 @@ export default function CreateProjectPageDark() { // 컴포넌트 이름에 Dark
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(projectData),
       });
-      const responseData = await response.json();
+      const responseData = await response.json(); // responseData도 필요시 타입 지정 가능
 
       if (!response.ok) {
         if (responseData.errors && typeof responseData.errors === 'object' && !Array.isArray(responseData.errors)) {
-          setFieldErrors(responseData.errors);
+          setFieldErrors(responseData.errors as Record<string, string>); // 서버 에러 타입에 맞춰 캐스팅
           setError(responseData.message || '입력값에 오류가 있습니다. 각 필드의 오류를 확인해주세요.');
         } else if (responseData.message) {
           setError(responseData.message);
         } else {
           setError('프로젝트 생성에 실패했습니다. (서버 응답 오류)');
         }
-        return; 
+        return;
       }
-      
+
       alert('프로젝트가 성공적으로 생성 요청되었습니다!');
       router.push('/projects');
 
-    } catch (err: any) {
+    } catch (err: unknown) { // err 타입을 unknown으로 지정
       console.error("Submit Error:", err);
-      setError(err.message || '알 수 없는 오류가 발생했습니다. 네트워크 연결을 확인하거나 잠시 후 다시 시도해주세요.');
+      let message = '알 수 없는 오류가 발생했습니다. 네트워크 연결을 확인하거나 잠시 후 다시 시도해주세요.';
+      if (err instanceof Error) {
+        message = err.message;
+      } else if (typeof err === 'string') {
+        message = err;
+      } else if (typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message: unknown }).message === 'string') {
+        // 일반 객체 형태의 에러 메시지 처리
+        message = (err as { message: string }).message;
+      }
+      setError(message);
     } finally {
       setIsLoading(false);
     }
   };
 
   const getInputClasses = (fieldName: string) => {
-    let baseClasses = "w-full px-3 py-2 bg-gray-700 text-gray-100 border rounded-md focus:outline-none focus:ring-2 placeholder-gray-400";
+    // baseClasses를 const로 변경
+    const baseClasses = "w-full px-3 py-2 bg-gray-700 text-gray-100 border rounded-md focus:outline-none focus:ring-2 placeholder-gray-400";
     if (fieldErrors[fieldName]) {
       return `${baseClasses} border-red-500 focus:ring-red-400`;
     }
     return `${baseClasses} border-gray-600 focus:ring-blue-500 focus:border-blue-500`;
   };
-  
+
   const getSelectClasses = (fieldName: string) => {
-    let baseClasses = "w-full px-3 py-2.5 bg-gray-700 text-gray-100 border rounded-md shadow-sm focus:outline-none focus:ring-2";
-     if (fieldErrors[fieldName]) {
+    // baseClasses를 const로 변경
+    const baseClasses = "w-full px-3 py-2.5 bg-gray-700 text-gray-100 border rounded-md shadow-sm focus:outline-none focus:ring-2";
+    if (fieldErrors[fieldName]) {
       return `${baseClasses} border-red-500 focus:ring-red-400`;
     }
     return `${baseClasses} border-gray-600 focus:ring-blue-500 focus:border-blue-500`;
@@ -150,7 +176,7 @@ export default function CreateProjectPageDark() { // 컴포넌트 이름에 Dark
         )}
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          
+
           <fieldset className="border border-gray-700 p-4 sm:p-6 rounded-md">
             <legend className="text-lg font-semibold px-2 text-gray-200">1. 필수 정보</legend>
             <p className="text-sm text-gray-400 mt-1 mb-4 px-2">아래 정보는 프로젝트 배포를 위해 꼭 필요합니다.</p>
@@ -159,11 +185,11 @@ export default function CreateProjectPageDark() { // 컴포넌트 이름에 Dark
                 <label htmlFor="projectName" className="block text-sm font-medium text-gray-300 mb-1">
                   프로젝트 이름 <span className="text-red-400">*</span>
                 </label>
-                <input 
-                  id="projectName" 
-                  type="text" 
-                  value={projectName} 
-                  onChange={(e) => setProjectName(e.target.value)} 
+                <input
+                  id="projectName"
+                  type="text"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
                   placeholder="예: my-awesome-project"
                   className={getInputClasses('projectName')}
                 />
@@ -173,11 +199,11 @@ export default function CreateProjectPageDark() { // 컴포넌트 이름에 Dark
                 <label htmlFor="repository" className="block text-sm font-medium text-gray-300 mb-1">
                   Git 저장소 URL <span className="text-red-400">*</span>
                 </label>
-                <input 
-                  id="repository" 
-                  type="url" 
-                  value={repository} 
-                  onChange={(e) => setRepository(e.target.value)} 
+                <input
+                  id="repository"
+                  type="url"
+                  value={repository}
+                  onChange={(e) => setRepository(e.target.value)}
                   placeholder="예: https://github.com/user/repo.git"
                   className={getInputClasses('repository')}
                 />
@@ -194,22 +220,22 @@ export default function CreateProjectPageDark() { // 컴포넌트 이름에 Dark
             <div className="space-y-4">
               <div>
                 <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-1">프로젝트 설명</label>
-                <textarea 
-                  id="description" 
-                  value={description} 
-                  onChange={(e) => setDescription(e.target.value)} 
+                <textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                   placeholder="예: 이 프로젝트는 멋진 기능을 제공합니다."
-                  rows={3} 
+                  rows={3}
                   className={getInputClasses('description')}
                 />
               </div>
               <div>
                 <label htmlFor="namespace" className="block text-sm font-medium text-gray-300 mb-1">네임스페이스</label>
-                <input 
-                  id="namespace" 
-                  type="text" 
-                  value={namespace} 
-                  onChange={(e) => setNamespace(e.target.value)} 
+                <input
+                  id="namespace"
+                  type="text"
+                  value={namespace}
+                  onChange={(e) => setNamespace(e.target.value)}
                   placeholder="미입력 시 자동 할당"
                   className={getInputClasses('namespace')}
                 />
@@ -218,11 +244,11 @@ export default function CreateProjectPageDark() { // 컴포넌트 이름에 Dark
               </div>
               <div>
                 <label htmlFor="githubUrl" className="block text-sm font-medium text-gray-300 mb-1">GitHub 프로젝트 URL (웹 주소)</label>
-                <input 
-                  id="githubUrl" 
-                  type="url" 
-                  value={githubUrl} 
-                  onChange={(e) => setGithubUrl(e.target.value)} 
+                <input
+                  id="githubUrl"
+                  type="url"
+                  value={githubUrl}
+                  onChange={(e) => setGithubUrl(e.target.value)}
                   placeholder="예: https://github.com/user/repo (선택 사항)"
                   className={getInputClasses('githubUrl')}
                 />
@@ -230,11 +256,11 @@ export default function CreateProjectPageDark() { // 컴포넌트 이름에 Dark
               </div>
               <div>
                 <label htmlFor="customDomain" className="block text-sm font-medium text-gray-300 mb-1">사용자 지정 도메인</label>
-                <input 
-                  id="customDomain" 
-                  type="text" 
-                  value={customDomain} 
-                  onChange={(e) => setCustomDomain(e.target.value)} 
+                <input
+                  id="customDomain"
+                  type="text"
+                  value={customDomain}
+                  onChange={(e) => setCustomDomain(e.target.value)}
                   placeholder="예: my-project.example.com (선택 사항)"
                   className={getInputClasses('customDomain')}
                 />
@@ -243,9 +269,9 @@ export default function CreateProjectPageDark() { // 컴포넌트 이름에 Dark
               </div>
               <div>
                 <label htmlFor="cpuMemory" className="block text-sm font-medium text-gray-300 mb-1">리소스 크기 (CPU/Memory)</label>
-                <select 
-                  id="cpuMemory" 
-                  value={cpuMemory} 
+                <select
+                  id="cpuMemory"
+                  value={cpuMemory}
                   onChange={(e) => setCpuMemory(e.target.value as CpuMemoryOption | '')}
                   className={getSelectClasses('cpuMemory')}
                 >
@@ -259,12 +285,12 @@ export default function CreateProjectPageDark() { // 컴포넌트 이름에 Dark
               </div>
               <div>
                 <label htmlFor="replicas" className="block text-sm font-medium text-gray-300 mb-1">인스턴스 수 (Replicas)</label>
-                <input 
-                  id="replicas" 
-                  type="number" 
-                  value={replicas} 
-                  min="1" 
-                  onChange={(e) => setReplicas(e.target.value === '' ? '' : parseInt(e.target.value, 10))} 
+                <input
+                  id="replicas"
+                  type="number"
+                  value={replicas}
+                  min="1"
+                  onChange={(e) => setReplicas(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
                   placeholder="기본값 (1)"
                   className={getInputClasses('replicas')}
                 />
@@ -273,7 +299,7 @@ export default function CreateProjectPageDark() { // 컴포넌트 이름에 Dark
               </div>
             </div>
           </fieldset>
-          
+
           <div className="bg-gray-700 border border-gray-600 p-4 rounded-md text-sm text-gray-300">
             <h4 className="font-semibold text-gray-100 mb-1">중요 안내</h4>
             <p className="leading-relaxed">
@@ -283,8 +309,8 @@ export default function CreateProjectPageDark() { // 컴포넌트 이름에 Dark
             </p>
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={isLoading}
             className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed transition duration-150 ease-in-out"
           >
