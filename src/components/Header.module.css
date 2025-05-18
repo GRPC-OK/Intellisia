@@ -1,0 +1,27 @@
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #23272f;
+}
+
+.logo {
+  font-weight: bold;
+  font-size: 1.25rem;
+}
+
+.navRight {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.profile {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: #373c47;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
