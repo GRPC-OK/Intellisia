@@ -32,14 +32,8 @@ const vulnerabilities: Vulnerability[] = [
 export default function CodeAnalysis() {
   const router = useRouter();
 
-  const handleApprove = () => {
-    // 승인 로직 구현
+  const handleNext = () => {
     router.push('/image-build');
-  };
-
-  const handleReject = () => {
-    // 거부 로직 구현
-    router.push('/docker-analysis');
   };
 
   return (
@@ -110,11 +104,10 @@ export default function CodeAnalysis() {
                 </div>
               ))}
             </div>
-            <div className="action-buttons">
-              <button className="reject-btn" onClick={handleReject}>Reject</button>
-              <button className="approve-btn" onClick={handleApprove}>Approve</button>
-            </div>
           </section>
+          <div className="action-buttons">
+            <button className="next-btn" onClick={handleNext}>Next</button>
+          </div>
         </div>
       </main>
       <style jsx>{`
@@ -328,28 +321,22 @@ export default function CodeAnalysis() {
           gap: 12px;
           margin-top: 24px;
         }
-        .reject-btn, .approve-btn {
-          padding: 8px 24px;
+        .next-btn {
+          margin-top: 12px;
+          background: #2386f2;
+          color: #fff;
+          border: none;
           border-radius: 6px;
+          padding: 10px 32px;
+          font-size: 1.1rem;
           font-weight: 500;
           cursor: pointer;
-          border: none;
+          transition: background 0.15s;
         }
-        .reject-btn {
-          background: #21262d;
-          color: #c9d1d9;
-        }
-        .reject-btn:hover {
-          background: #30363d;
-        }
-        .approve-btn {
-          background: #238636;
-          color: white;
-        }
-        .approve-btn:hover {
-          background: #2ea043;
+        .next-btn:hover {
+          background: #1c6ed2;
         }
       `}</style>
     </div>
   );
-} 
+}
