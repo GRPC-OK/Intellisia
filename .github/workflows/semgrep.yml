@@ -1,0 +1,56 @@
+name: Run Semgrep
+
+on:
+  workflow_dispatch:
+    inputs:
+      versionId:
+        required: true
+      callbackUrl:
+        required: true
+      repo:
+        required: true
+      ref:
+        required: true
+
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clone target repository
+        env:
+          GH_TOKEN: ${{ secrets.PLATFORM_GITHUB_TOKEN }}
+        run: |
+          git clone --branch ${{ github.event.inputs.ref }} \
+            https://$GH_TOKEN@github.com/${{ github.event.inputs.repo }} target-repo
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Semgrep
+        run: pip install semgrep
+
+      - name: Run Semgrep and save SARIF
+        id: semgrep
+        run: |
+          cd target-repo
+          # SARIF는 stdout에 저장, 에러는 stderr로 따로 저장
+          if semgrep --config=p/default --sarif > ../semgrep.sarif 2> ../semgrep-error.log; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=fail" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload result to backend
+        run: |
+          if [ "${{ steps.semgrep.outputs.status }}" = "success" ]; then
+            curl -X POST "${{ github.event.inputs.callbackUrl }}?versionId=${{ github.event.inputs.versionId }}" \
+              -H "Content-Type: application/json" \
+              -d @semgrep.sarif
+          else
+            curl -X POST "${{ github.event.inputs.callbackUrl }}?versionId=${{ github.event.inputs.versionId }}" \
+              -H "Content-Type: text/plain" \
+              --data-binary @semgrep-error.log
+          fi
