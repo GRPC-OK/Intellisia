@@ -52,7 +52,7 @@ model ProjectContributors {
   @@unique([userId, projectId])
 }
 
-// ==================== 버전 ====================
+//  버전 
 model Version {
   id              Int     @id @default(autoincrement())
   name            String
@@ -70,8 +70,8 @@ model Version {
   codeStatus    StepStatus    @default(none)
   buildStatus   StepStatus    @default(none)
   imageStatus   StepStatus    @default(none)
-  deployStatus  StepStatus    @default(none)
   approveStatus ApproveStatus @default(none)
+  deployStatus  StepStatus    @default(none)
   flowStatus    FlowStatus    @default(none)
 
   helmValues   HelmValues? @relation(name: "VersionHelmRelation", fields: [helmValuesId], references: [id])
@@ -85,6 +85,8 @@ model Version {
   author   User @relation(fields: [authorId], references: [id])
   authorId Int
 
+  codeAnalysis CodeAnalysis? @relation("CodeAnalysisForVersion")
+
   @@unique([projectId, name])
 }
 
@@ -94,6 +96,31 @@ model HelmValues {
   createdAt DateTime @default(now())
 
   version Version? @relation(name: "VersionHelmRelation")
+}
+
+// 코드 정적 분석
+model CodeAnalysis {
+  id        Int      @id @default(autoincrement())
+  versionId Int      @unique
+  errorLog  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  version Version     @relation("CodeAnalysisForVersion", fields: [versionId], references: [id])
+  issues  CodeIssue[]
+}
+
+model CodeIssue {
+  id             Int     @id @default(autoincrement())
+  codeAnalysisId Int
+  ruleId         String
+  message        String
+  severity       String?
+  filePath       String
+  line           Int
+  column         Int?
+
+  codeAnalysis CodeAnalysis @relation(fields: [codeAnalysisId], references: [id])
 }
 
 // ==================== enum ====================
