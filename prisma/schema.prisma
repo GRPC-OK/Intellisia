@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL") // .env 파일에서 설정할 것입니다.
 }
 
 // 사용자
@@ -21,27 +21,31 @@ model User {
   contributions ProjectContributors[]
 }
 
-// 프로젝트 
+// 프로젝트
 model Project {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String
-  githubUrl   String
-  domain      String   @unique
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                Int      @id @default(autoincrement())
+  name              String
+  namespace         String
+  description       String
+  repository        String   @unique
+  githubUrl         String
+  domain            String   @unique
+  cpuMemory         String   // 예: "small", "medium", "large"
+  replicas          Int
+  ingressConfig     Json?
+  serviceConfig     Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  owner   User @relation("ProjectOwner", fields: [ownerId], references: [id])
-  ownerId Int
+  owner             User     @relation("ProjectOwner", fields: [ownerId], references: [id])
+  ownerId           Int
 
-  contributors ProjectContributors[]
-  versions     Version[]
-
-  // 프로젝트의 기본 Helm values 
+  contributors      ProjectContributors[]
+  versions          Version[]
   defaultHelmValues Json?
 }
 
-// 프로젝트 기여자 
+// 프로젝트 기여자
 model ProjectContributors {
   id        Int     @id @default(autoincrement())
   user      User    @relation(fields: [userId], references: [id])
@@ -52,38 +56,33 @@ model ProjectContributors {
   @@unique([userId, projectId])
 }
 
-// ==================== 버전 ====================
+// 버전
 model Version {
-  id              Int     @id @default(autoincrement())
-  name            String
-  description     String
-  isCurrent       Boolean @default(false)
-  imageTag        String
-  branch          String
-  commitHash      String
-  applicationName String
+  id                Int      @id @default(autoincrement())
+  name              String
+  description       String
+  isCurrent         Boolean  @default(false)
+  imageTag          String
+  branch            String
+  commitHash        String
+  applicationName   String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  codeStatus        StepStatus    @default(none)
+  buildStatus       StepStatus    @default(none)
+  imageStatus       StepStatus    @default(none)
+  deployStatus      StepStatus    @default(none)
+  approveStatus     ApproveStatus @default(none)
+  flowStatus        FlowStatus    @default(none)
 
-  // 상태 필드
-  codeStatus    StepStatus    @default(none)
-  buildStatus   StepStatus    @default(none)
-  imageStatus   StepStatus    @default(none)
-  deployStatus  StepStatus    @default(none)
-  approveStatus ApproveStatus @default(none)
-  flowStatus    FlowStatus    @default(none)
+  helmValues        HelmValues?   @relation(name: "VersionHelmRelation", fields: [helmValuesId], references: [id])
+  helmValuesId      Int?          @unique
 
-  helmValues   HelmValues? @relation(name: "VersionHelmRelation", fields: [helmValuesId], references: [id])
-  helmValuesId Int?        @unique
-
-  // Project 연결
-  project   Project @relation(fields: [projectId], references: [id])
-  projectId Int
-
-  // 작성자
-  author   User @relation(fields: [authorId], references: [id])
-  authorId Int
+  project           Project       @relation(fields: [projectId], references: [id])
+  projectId         Int
+  author            User          @relation(fields: [authorId], references: [id])
+  authorId          Int
 
   @@unique([projectId, name])
 }
@@ -92,11 +91,10 @@ model HelmValues {
   id        Int      @id @default(autoincrement())
   content   Json
   createdAt DateTime @default(now())
-
-  version Version? @relation(name: "VersionHelmRelation")
+  version   Version? @relation(name: "VersionHelmRelation")
 }
 
-// ==================== enum ====================
+// Enum 타입들
 enum StepStatus {
   none
   pending
