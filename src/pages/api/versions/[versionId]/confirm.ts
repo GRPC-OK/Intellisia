@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import prisma from '@/lib/prisma';
-import { triggerSemgrepWorkflow } from '@/services/code-analysis.dispatcher';
-import { updateVersionStatusSafely } from '@/lib/updateVersionStatusSafely';
+import { triggerSemgrepWorkflow } from '@/services/code-analysis-service/code-analysis-dispatcher';
+import { updateVersionStatusSafely } from '@/services/version-service/version-status-updater.service';
 
 export default async function handler(
   req: NextApiRequest,

@@ -1,6 +1,6 @@
 import prisma from '@/lib/prisma';
 import { extractSemgrepIssues } from '@/utils/parseSarifSemgrep';
-import { updateVersionStatusSafely } from '@/lib/updateVersionStatusSafely';
+import { updateVersionStatusSafely } from '@/services/version-service/version-status-updater.service';
 import { SarifCodeIssue, RawSarif } from '@/types/sarif';
 
 export async function handleSemgrepResult(
