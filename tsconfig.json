@@ -9,6 +9,7 @@
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
+    //"module": "CommonJS", // <-- "esnext"에서 "CommonJS"로 변경. npx prisma migrate dev --name "Create initial tables" 실행하기 위함함
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
