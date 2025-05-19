@@ -14,10 +14,18 @@ export async function handleSemgrepResult(
   if (!isJson) {
     const errorText = typeof sarif === 'string' ? sarif : JSON.stringify(sarif);
 
-    await prisma.codeAnalysis.create({
-      data: {
+    await prisma.codeAnalysis.upsert({
+      where: { versionId },
+      update: {
+        errorLog: errorText,
+        status: 'fail',
+        hasIssue: false,
+      },
+      create: {
         versionId,
-        errorLog: errorText, // 직접 DB에 실패 로그 저장
+        errorLog: errorText,
+        status: 'fail',
+        hasIssue: false,
       },
     });
 
@@ -35,15 +43,36 @@ export async function handleSemgrepResult(
     const issues: SarifCodeIssue[] = extractSemgrepIssues(parsed);
 
     await prisma.$transaction(async (tx) => {
-      await tx.codeAnalysis.create({
-        data: {
+      const analysis = await tx.codeAnalysis.upsert({
+        where: { versionId },
+        update: {
+          errorLog: null,
+          status: 'success',
+          hasIssue: issues.length > 0,
+        },
+        create: {
           versionId,
           errorLog: null,
-          ...(issues.length > 0 && {
-            issues: { createMany: { data: issues } },
-          }),
+          status: 'success',
+          hasIssue: issues.length > 0,
         },
       });
+
+      // 기존 이슈 삭제
+      await tx.codeIssue.deleteMany({
+        where: { versionId },
+      });
+
+      // 새로운 이슈 저장
+      if (issues.length > 0) {
+        await tx.codeIssue.createMany({
+          data: issues.map((issue) => ({
+            versionId,
+            codeAnalysisId: analysis.id,
+            ...issue,
+          })),
+        });
+      }
     });
 
     await updateVersionStatusSafely(versionId, {
@@ -53,10 +82,18 @@ export async function handleSemgrepResult(
     const fallback =
       typeof sarif === 'object' ? JSON.stringify(sarif) : String(sarif);
 
-    await prisma.codeAnalysis.create({
-      data: {
+    await prisma.codeAnalysis.upsert({
+      where: { versionId },
+      update: {
+        errorLog: `SARIF 파싱 실패\n${fallback}\n예외: ${String(e)}`,
+        status: 'fail',
+        hasIssue: false,
+      },
+      create: {
         versionId,
-        errorLog: `SARIF 파싱 실패\n${fallback}\n예외: ${String(e)}`, // 실패 메시지 직접 저장
+        errorLog: `SARIF 파싱 실패\n${fallback}\n예외: ${String(e)}`,
+        status: 'fail',
+        hasIssue: false,
       },
     });
 

@@ -87,6 +87,9 @@ model Version {
 
   codeAnalysis CodeAnalysis? @relation("CodeAnalysisForVersion")
 
+  // 코드 이슈
+  codeIssues CodeIssue[]
+
   @@unique([projectId, name])
 }
 
@@ -100,11 +103,13 @@ model HelmValues {
 
 // 코드 정적 분석
 model CodeAnalysis {
-  id        Int      @id @default(autoincrement())
-  versionId Int      @unique
+  id        Int            @id @default(autoincrement())
+  versionId Int            @unique
+  status    AnalysisStatus
+  hasIssue  Boolean
   errorLog  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 
   version Version     @relation("CodeAnalysisForVersion", fields: [versionId], references: [id])
   issues  CodeIssue[]
@@ -112,6 +117,7 @@ model CodeAnalysis {
 
 model CodeIssue {
   id             Int     @id @default(autoincrement())
+  versionId      Int
   codeAnalysisId Int
   ruleId         String
   message        String
@@ -120,7 +126,11 @@ model CodeIssue {
   line           Int
   column         Int?
 
-  codeAnalysis CodeAnalysis @relation(fields: [codeAnalysisId], references: [id])
+  version      Version      @relation(fields: [versionId], references: [id])
+  codeAnalysis CodeAnalysis @relation(fields: [codeAnalysisId], references: [id], onDelete: Cascade)
+
+  @@index([versionId])
+  @@index([codeAnalysisId])
 }
 
 // ==================== enum ====================
@@ -140,6 +150,12 @@ enum ApproveStatus {
 
 enum FlowStatus {
   none
+  pending
+  success
+  fail
+}
+
+enum AnalysisStatus {
   pending
   success
   fail

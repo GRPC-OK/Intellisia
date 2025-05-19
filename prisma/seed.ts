@@ -2,7 +2,6 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  // 유저 생성
   const user = await prisma.user.create({
     data: {
       name: '테스트유저',
@@ -11,40 +10,45 @@ async function main() {
     },
   });
 
-  // 프로젝트 생성
   const project = await prisma.project.create({
     data: {
-      name: '테스트 프로젝트',
-      description: '설명입니다',
-      githubUrl: 'https://github.com/test/test',
-      domain: 'test.localhost',
+      name: 'Test Next.js App',
+      description: '테스트용 공개 레포',
+      githubUrl: 'https://github.com/JSHWJ/Test-Nextjs-app',
+      domain: 'test-app.localhost',
       ownerId: user.id,
     },
   });
 
-  // 헬름 값
   const helm = await prisma.helmValues.create({
     data: {
-      content: { replicaCount: 1 },
+      content: {
+        replicaCount: 1,
+        image: {
+          repository: 'test-image',
+          tag: 'latest',
+        },
+      },
     },
   });
 
-  // 버전 생성
   await prisma.version.create({
     data: {
-      name: 'v1.0.0',
-      description: '테스트 버전입니다',
-      isCurrent: true,
+      name: 'v0.1.0',
+      description: '처음 테스트 버전입니다',
+      isCurrent: false,
       branch: 'main',
-      commitHash: 'abcdef123456',
-      applicationName: 'test-app',
-      imageTag: 'test-image:1.0.0',
-      codeStatus: 'success',
-      buildStatus: 'success',
-      imageStatus: 'pending',
+      commitHash: '', // 아직 없음
+      applicationName: 'test-next-app',
+      imageTag: '',
+
+      codeStatus: 'none',
+      buildStatus: 'none',
+      imageStatus: 'none',
       approveStatus: 'none',
       deployStatus: 'none',
-      flowStatus: 'pending',
+      flowStatus: 'none',
+
       projectId: project.id,
       authorId: user.id,
       helmValuesId: helm.id,
@@ -54,10 +58,10 @@ async function main() {
 
 main()
   .then(() => {
-    console.log('Seed 완료');
+    console.log('✅ 테스트 데이터 삽입 완료');
   })
   .catch((e) => {
-    console.error(e);
+    console.error('❌ 오류:', e);
   })
   .finally(() => {
     prisma.$disconnect();
