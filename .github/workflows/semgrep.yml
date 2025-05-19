@@ -11,6 +11,7 @@ on:
         required: true
       ref:
         required: true
+
 jobs:
   semgrep:
     runs-on: ubuntu-latest
@@ -33,24 +34,31 @@ jobs:
           pip install semgrep
           sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Run Semgrep and extract results only
+      - name: Run Semgrep and parse result to custom format
         id: semgrep
         run: |
-          mkdir -p output                                    # ✅ 공통 저장 경로
+          mkdir -p output
           cd target-repo
           if semgrep --config=p/default --sarif > ../output/full.sarif 2> ../output/error.log; then
-            jq '.runs[0].results' ../output/full.sarif > ../output/results.json
+            jq '[.runs[0].results[] | {
+              ruleId: .ruleId,
+              message: .message.text,
+              severity: .level,
+              filePath: .locations[0].physicalLocation.artifactLocation.uri,
+              line: .locations[0].physicalLocation.region.startLine,
+              column: .locations[0].physicalLocation.region.startColumn,
+              tags: (.properties.tags // [])
+            } | {
+              ruleId, message, severity, filePath, line, column,
+              cwe: ( .tags[]? | select(test("^CWE-") ) ) // null,
+              cve: ( .tags[]? | select(test("^CVE-") ) ) // null
+            }]' ../output/full.sarif > ../output/results.json
             echo "status=success" >> $GITHUB_OUTPUT
           else
             echo "status=fail" >> $GITHUB_OUTPUT
           fi
 
-      - name: Debug extracted Semgrep results (for inspection)
-        run: |
-          echo "=== Extracted Semgrep Results ==="
-          cat output/results.json                            # ✅ 항상 이 경로만 참조
-
-      - name: Upload result to backend (optimized)
+      - name: Upload result to backend
         run: |
           if [ "${{ steps.semgrep.outputs.status }}" = "success" ]; then
             curl -X POST "${{ github.event.inputs.callbackUrl }}?versionId=${{ github.event.inputs.versionId }}" \
