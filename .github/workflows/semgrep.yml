@@ -45,6 +45,11 @@ jobs:
             echo "status=fail" >> $GITHUB_OUTPUT
           fi
 
+      - name: Debug extracted Semgrep results (for inspection)
+        run: |
+          echo "=== Extracted Semgrep Results ==="
+          cat ../semgrep-results.json
+
       - name: Upload result to backend (optimized)
         run: |
           if [ "${{ steps.semgrep.outputs.status }}" = "success" ]; then
