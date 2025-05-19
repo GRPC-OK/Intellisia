@@ -1,5 +1,5 @@
 // types/next-auth.d.ts
-import NextAuth from 'next-auth'
+import type { DefaultSession } from 'next-auth'
 
 // NextAuth의 타입 정의를 확장하기 위해 'next-auth' 모듈을 다시 선언(declare module)
 declare module 'next-auth' {
