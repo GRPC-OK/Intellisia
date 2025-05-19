@@ -38,7 +38,7 @@ jobs:
         id: semgrep
         run: |
           cd target-repo
-          if semgrep --config=p/default --sarif > ../semgrep-full.sarif 2> ../semgrep-error.log; then
+          if semgrep --config=auto --metrics=off --sarif > ../semgrep-full.sarif 2> ../semgrep-error.log; then
             jq '.runs[0].results' ../semgrep-full.sarif > ../semgrep-results.json
             echo "status=success" >> $GITHUB_OUTPUT
           else
@@ -48,7 +48,7 @@ jobs:
       - name: Debug extracted Semgrep results (for inspection)
         run: |
           echo "=== Extracted Semgrep Results ==="
-          cat ../semgrep-results.json
+          cat semgrep-results.json
 
       - name: Upload result to backend (optimized)
         run: |
