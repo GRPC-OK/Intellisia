@@ -16,7 +16,7 @@ declare module 'next-auth' {
 // JWT 토큰 구조를 확장하기 위해 'next-auth/jwt' 모듈도 다시 선언
 declare module 'next-auth/jwt' {
 
-  // JWT 객체 타입 확장
+  // JWT 객체 타입 확장 1
   // - accessToken은 로그인 직후 GitHub에서 받은 토큰
   // - 이후 session 콜백에서 session에 복사해 사용함
   interface JWT {
