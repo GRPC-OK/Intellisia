@@ -57,13 +57,23 @@ jobs:
             echo "status=fail" >> $GITHUB_OUTPUT
           fi
 
+      - name: Debug parsed results
+        if: steps.semgrep.outputs.status == 'success'
+        run: |
+          echo "=== Parsed Semgrep Results ==="
+          cat output/results.json
+
       - name: Upload result to backend
         run: |
           if [ "${{ steps.semgrep.outputs.status }}" = "success" ]; then
+            echo "=== Uploading parsed JSON results to backend ==="
+            cat output/results.json
             curl -X POST "${{ github.event.inputs.callbackUrl }}?versionId=${{ github.event.inputs.versionId }}" \
               -H "Content-Type: application/json" \
               --data-binary @output/results.json
           else
+            echo "=== Uploading error log to backend ==="
+            cat output/error.log
             curl -X POST "${{ github.event.inputs.callbackUrl }}?versionId=${{ github.event.inputs.versionId }}" \
               -H "Content-Type: text/plain" \
               --data-binary @output/error.log
