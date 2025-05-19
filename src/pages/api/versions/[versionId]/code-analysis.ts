@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { triggerCodeAnalysisFlow } from '@/application/code-analysis/triggerCodeAnalysisFlow';
+import { handleSemgrepResult } from '@/services/code-analysis-service/code-analysis.service';
+import type { SarifCodeIssue } from '@/types/sarif';
 
 export const config = {
   api: {
@@ -23,12 +24,16 @@ export default async function handler(
   }
 
   try {
-    await triggerCodeAnalysisFlow(versionId);
-    return res.status(200).json({ message: '정적 분석 트리거 완료' });
+    const contentType = req.headers['content-type'] ?? '';
+    const issues = req.body as SarifCodeIssue[];
+    await handleSemgrepResult(versionId, issues, contentType);
+
+    return res.status(200).json({ message: '분석 결과 저장 완료' });
   } catch (error) {
-    console.error('[CONFIRM API ERROR]', error);
-    return res
-      .status(500)
-      .json({ message: '트리거 실패', error: String(error) });
+    console.error('[CODE ANALYSIS ERROR]', error);
+    return res.status(500).json({
+      message: '분석 결과 저장 실패',
+      error: String(error),
+    });
   }
 }
