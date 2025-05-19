@@ -31,61 +31,6 @@ export default function DeploymentApproval() {
     router.push('/deployment');
   };
 
-
-
-  const [comments, setComments] = useState<Comment[]>([
-    {
-      id: 2,
-      author: '이명일',
-      content: '이미지 분석 과정에서 취약점이 발견되어, 정확한 원인 파악 및 해결 방안 모색을 위해 면밀한 검토가 필요해 보입니다.',
-      timestamp: '2025-05-13 15:30:12'
-    }
-  ]);
-  const [newComment, setNewComment] = useState('');
-  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
-  const [editContent, setEditContent] = useState('');
-
-  const handleAddComment = () => {
-    if (newComment.trim()) {
-      const comment: Comment = {
-        id: comments.length + 1,
-        author: 'Current User',
-        content: newComment,
-        timestamp: new Date().toLocaleString()
-      };
-      setComments([...comments, comment]);
-      setNewComment('');
-    }
-  };
-
-  const handleEditComment = (commentId: number) => {
-    const comment = comments.find(c => c.id === commentId);
-    if (comment) {
-      setEditingCommentId(commentId);
-      setEditContent(comment.content);
-    }
-  };
-
-  const handleSaveEdit = (commentId: number) => {
-    if (editContent.trim()) {
-      setComments(comments.map(comment => 
-        comment.id === commentId 
-          ? { ...comment, content: editContent, timestamp: new Date().toLocaleString() }
-          : comment
-      ));
-      setEditingCommentId(null);
-      setEditContent('');
-    }
-  };
-
-  const handleDeleteComment = (commentId: number) => {
-    setComments(comments.filter(comment => comment.id !== commentId));
-  };
-
-  const handleCancelEdit = () => {
-    setEditingCommentId(null);
-    setEditContent('');
-  };
   return (
     <div className="github-bg">
       <header className="github-header">
@@ -118,106 +63,34 @@ export default function DeploymentApproval() {
         <div className="main-content-left">
           <h1 className="main-title">Deployment Approval Details</h1>
           <div className="approval-card">
-  <div><b>Requested By:</b> 민선재 </div>
-  <div><b>Requested At:</b> 2025-05-13 15:10:22</div>
-  <div><b>Status:</b> {approvalStatus === 'pending' && <span className="approval-pending">Pending</span>}
-    {approvalStatus === 'approved' && <span className="approval-approved">Approved</span>}
-    {approvalStatus === 'rejected' && <span className="approval-rejected">Rejected</span>}
-  </div>
-  <div className="approval-comment-title"><b>Comment:</b></div>
-  <div className="approval-comment">배포 승인 요청드립니다. 변경사항은 보안 패치입니다.</div>
-  <div style={{ marginTop: 20, display: 'flex', gap: 16 }}>
-    <button
-      className="github-new-btn-blue"
-      onClick={handleApprove}
-      disabled={approvalStatus !== 'pending' || isProcessing}
-      style={{ minWidth: 100 }}
-    >
-      Approve
-    </button>
-    <button
-      className="comment-action-btn delete"
-      onClick={handleReject}
-      disabled={approvalStatus !== 'pending' || isProcessing}
-      style={{ minWidth: 100 }}
-    >
-      Reject
-    </button>
-  </div>
-</div>
-
-          <div className="comments-section">
-            <h2 className="comments-title">Comments</h2>
-            <div className="comments-list">
-              {comments.map((comment) => (
-                <div key={comment.id} className="comment-card">
-                  <div className="comment-header">
-                    <span className="comment-author">{comment.author}</span>
-                    <span className="comment-timestamp">{comment.timestamp}</span>
-                  </div>
-                  {editingCommentId === comment.id ? (
-                    <div className="comment-edit">
-                      <textarea
-                        value={editContent}
-                        onChange={(e) => setEditContent(e.target.value)}
-                        className="comment-textarea"
-                      />
-                      <div className="comment-edit-actions">
-                        <button 
-                          onClick={() => handleSaveEdit(comment.id)}
-                          className="comment-edit-btn save"
-                          disabled={!editContent.trim()}
-                        >
-                          Save
-                        </button>
-                        <button 
-                          onClick={handleCancelEdit}
-                          className="comment-edit-btn cancel"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="comment-content">{comment.content}</div>
-                      <div className="comment-actions">
-                        <button 
-                          onClick={() => handleEditComment(comment.id)}
-                          className="comment-action-btn edit"
-                        >
-                          Edit
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteComment(comment.id)}
-                          className="comment-action-btn delete"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ))}
+            <div><b>Requested By:</b> 민선재 </div>
+            <div><b>Requested At:</b> 2025-05-13 15:10:22</div>
+            <div><b>Status:</b> {approvalStatus === 'pending' && <span className="approval-pending">Pending</span>}
+              {approvalStatus === 'approved' && <span className="approval-approved">Approved</span>}
+              {approvalStatus === 'rejected' && <span className="approval-rejected">Rejected</span>}
             </div>
-            <div className="new-comment">
-              <textarea
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Write a comment..."
-                className="comment-textarea"
-              />
-              <button 
-                onClick={handleAddComment}
-                className="comment-submit-btn"
-                disabled={!newComment.trim()}
+            <div className="approval-comment-title"><b>Comment:</b></div>
+            <div className="approval-comment">배포 승인 요청드립니다. 변경사항은 보안 패치입니다.</div>
+            <div style={{ marginTop: 20, display: 'flex', gap: 16 }}>
+              <button
+                className="github-new-btn-blue"
+                onClick={handleApprove}
+                disabled={approvalStatus !== 'pending' || isProcessing}
+                style={{ minWidth: 100 }}
               >
-                Comment
+                Approve
+              </button>
+              <button
+                className="comment-action-btn delete"
+                onClick={handleReject}
+                disabled={approvalStatus !== 'pending' || isProcessing}
+                style={{ minWidth: 100 }}
+              >
+                Reject
               </button>
             </div>
           </div>
         </div>
-
       </main>
       <style jsx>{`
         .github-bg { min-height: 100vh; background: #161b22; color: #fff; }
@@ -250,90 +123,6 @@ export default function DeploymentApproval() {
           border-radius: 8px;
           padding: 12px 18px;
         }
-        .comments-section {
-          margin-top: 32px;
-        }
-        .comments-title {
-          font-size: 1.5rem;
-          margin-bottom: 16px;
-        }
-        .comments-list {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          margin-bottom: 24px;
-        }
-        .comment-card {
-          background: #181c20;
-          border-radius: 12px;
-          padding: 20px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        }
-        .comment-header {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 8px;
-        }
-        .comment-author {
-          font-weight: bold;
-          color: #58a6ff;
-        }
-        .comment-timestamp {
-          color: #8b949e;
-          font-size: 0.9rem;
-        }
-        .comment-content {
-          color: #c9d1d9;
-          line-height: 1.5;
-        }
-        .new-comment {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-        .comment-textarea {
-          background: #23272e;
-          border: 1px solid #30363d;
-          border-radius: 8px;
-          padding: 12px;
-          color: #c9d1d9;
-          font-size: 1rem;
-          min-height: 100px;
-          resize: vertical;
-        }
-        .comment-textarea:focus {
-          outline: none;
-          border-color: #58a6ff;
-        }
-        .comment-submit-btn {
-          align-self: flex-end;
-          background: #2386f2;
-          color: #fff;
-          border: none;
-          border-radius: 6px;
-          padding: 8px 16px;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: background 0.15s;
-        }
-        .comment-submit-btn:hover:not(:disabled) {
-          background: #1c6ed2;
-        }
-        .comment-submit-btn:disabled {
-          background: #30363d;
-          cursor: not-allowed;
-        }
-        .comment-actions {
-          display: flex;
-          gap: 8px;
-          margin-top: 12px;
-          justify-content: flex-end;
-        }
-        .comment-action-btn {
-          background: transparent;
-          border: 1px solid #30363d;
-          border-radius: 6px;
           padding: 4px 12px;
           font-size: 12px;
           cursor: pointer;
