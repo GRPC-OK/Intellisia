@@ -31,6 +31,11 @@ model Project {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  techStack     String?
+  cpu           Int?     
+  networkConfig String?
+
+
   owner   User @relation("ProjectOwner", fields: [ownerId], references: [id])
   ownerId Int
 
