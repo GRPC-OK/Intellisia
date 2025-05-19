@@ -64,26 +64,6 @@ export default function Dashboard() {
 
   return (
     <div className={styles.container}>
-      {/* 상단 네비게이션 */}
-      <nav className={styles.nav}>
-        <div className={styles.logo}>Acme AI</div>
-        <div className={styles.menu}>
-          <a href="#">Dashboard</a>
-          <a href="#">Blueprints</a>
-          <a href="#">Env Groups</a>
-          <a href="#">Docs</a>
-          <a href="#">Community</a>
-          <a href="#">Help</a>
-        </div>
-        <div className={styles.navRight}>
-          {/* 프로젝트 등록(생성) 버튼 */}
-          <button className={styles.newBtn} onClick={handleNewProject}>New</button>
-          <div className={styles.profile}>
-            <span>●</span>
-          </div>
-        </div>
-      </nav>
-
       {/* 전체 프로젝트 목록 조회 UI */}
       <main className={styles.main}>
         <h1 className={styles.title}>Current Projects</h1>
@@ -128,7 +108,6 @@ export default function Dashboard() {
         </div>
         {/* 필터링, 로그 등 추가 UI는 추후 구현 가능 */}
         <div className={styles.btnGroup}>
-          <button className={styles.cancelBtn}>Cancel</button>
           {/* 프로젝트 등록(생성) 버튼 */}
           <button className={styles.createBtn} onClick={handleNewProject}>프로젝트 등록</button>
         </div>

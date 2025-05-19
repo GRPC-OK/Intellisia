@@ -1,7 +1,26 @@
+
+
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+
+
+body{
+  background: #161b22;
+  color: #fff;
+  font-family: 'Segoe UI', 'Arial', sans-serif;
+}
+
+body::-webkit-scrollbar {
+  display: none;
+}
+
+
+
+
+/* 
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -43,4 +62,4 @@ a {
   html {
     color-scheme: dark;
   }
-}
+} */
