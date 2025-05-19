@@ -54,9 +54,13 @@ export default function Dashboard() {
         // API 응답 데이터 파싱 (ProjectData[] 타입)
         const data: ProjectData[] = await response.json();
         setProjects(data); // 프로젝트 목록 상태 업데이트
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('프로젝트 목록 가져오기 실패:', err);
-        setError(err.message || '프로젝트 목록을 가져오는 중 오류 발생'); // 오류 상태 업데이트
+        setError(
+          err instanceof Error
+            ? err.message
+            : '프로젝트 목록을 가져오는 중 오류 발생'
+        );
         setProjects([]); // 오류 발생 시 목록 비우기
       } finally {
         setIsLoading(false); // 로딩 종료
