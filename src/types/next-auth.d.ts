@@ -6,7 +6,7 @@ declare module 'next-auth' {
 
   // Session 객체를 확장함
   // - 원래 Session에는 accessToken이 없는데 우리가 추가로 넣었기 때문에 타입 보강이 필요함
-  interface Session {
+  interface Session extends DefaultSession{
     // accessToken: GitHub OAuth 로그인 후 얻은 액세스 토큰
     // - 이 토큰을 통해 GitHub API에 직접 요청 가능
     accessToken?: string
