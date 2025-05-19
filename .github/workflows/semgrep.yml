@@ -11,7 +11,6 @@ on:
         required: true
       ref:
         required: true
-
 jobs:
   semgrep:
     runs-on: ubuntu-latest
@@ -37,9 +36,10 @@ jobs:
       - name: Run Semgrep and extract results only
         id: semgrep
         run: |
+          mkdir -p output                                    # ✅ 공통 저장 경로
           cd target-repo
-          if semgrep --config=auto --metrics=off --sarif > ../semgrep-full.sarif 2> ../semgrep-error.log; then
-            jq '.runs[0].results' ../semgrep-full.sarif > ../semgrep-results.json
+          if semgrep --config=p/default --sarif > ../output/full.sarif 2> ../output/error.log; then
+            jq '.runs[0].results' ../output/full.sarif > ../output/results.json
             echo "status=success" >> $GITHUB_OUTPUT
           else
             echo "status=fail" >> $GITHUB_OUTPUT
@@ -48,16 +48,16 @@ jobs:
       - name: Debug extracted Semgrep results (for inspection)
         run: |
           echo "=== Extracted Semgrep Results ==="
-          cat semgrep-results.json
+          cat output/results.json                            # ✅ 항상 이 경로만 참조
 
       - name: Upload result to backend (optimized)
         run: |
           if [ "${{ steps.semgrep.outputs.status }}" = "success" ]; then
             curl -X POST "${{ github.event.inputs.callbackUrl }}?versionId=${{ github.event.inputs.versionId }}" \
               -H "Content-Type: application/json" \
-              --data-binary @semgrep-results.json
+              --data-binary @output/results.json
           else
             curl -X POST "${{ github.event.inputs.callbackUrl }}?versionId=${{ github.event.inputs.versionId }}" \
               -H "Content-Type: text/plain" \
-              --data-binary @semgrep-error.log
+              --data-binary @output/error.log
           fi
