@@ -121,7 +121,9 @@ model CodeIssue {
   codeAnalysisId Int
   ruleId         String
   message        String
-  severity       String?
+  severity   String?  
+  cwe        String? 
+  cve        String? 
   filePath       String
   line           Int
   column         Int?
