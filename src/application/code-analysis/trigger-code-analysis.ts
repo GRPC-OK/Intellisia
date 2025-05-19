@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma';
-import { triggerSemgrepWorkflow } from '@/services/code-analysis-service/code-analysis-dispatcher';
+import { triggerSemgrepWorkflow } from '@/services/code-analysis-service/trigger-semgrep-workflow';
 import { updateVersionStatusSafely } from '@/services/version-service/version-status-updater.service';
 
 export async function triggerCodeAnalysisFlow(versionId: number) {
