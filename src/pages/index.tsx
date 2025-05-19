@@ -2,7 +2,7 @@
 // - useSession: 현재 로그인 세션 조회
 // - signIn: 로그인 시작 (GitHub OAuth 요청)
 // - signOut: 세션 종료 및 로그아웃 처리
-import { signIn, signOut, useSession } from 'next-auth/react'
+import { signIn, useSession } from 'next-auth/react'
 import { useGithub } from '../context/GithubContext'
 // React 상태 관리를 위한 useState 훅 import
 import { useState, useEffect } from 'react'
