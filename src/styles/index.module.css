@@ -1,0 +1,86 @@
+/* src/styles/index.module.css */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 5px solid rgba(0, 0, 0, 0.1);
+    border-top: 5px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.loading__spinner {
+    text-align: center;
+    margin: 0;
+}
+
+
+.loginButton {
+    background-color: #238636;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-bottom: 20px;
+}
+
+.loginButton:hover {
+    background-color: #3ea55b;
+}
+
+.loginBox{
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+    background-color: #23272E;
+    border-radius: 10px;
+    padding: 20px;
+    border: 1px solid grey;
+    margin-top: 20px;
+}
+
+
+.text {
+    margin-top: 0px;
+    margin-bottom: 30px;
+    font-weight: 500;
+}
+
+.text__userName {
+    margin: 5px 0 20px 0;
+}
+
+.text__userEmail {
+    margin: 20px 0 40px 0;
+}
