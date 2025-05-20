@@ -32,9 +32,10 @@ model Project {
   updatedAt   DateTime @updatedAt
 
   techStack     String?
-  cpu           Int?     
-  networkConfig String?
+  cpu           Int?  
+  memory        Int?
 
+  applicationPort Int  
 
   owner   User @relation("ProjectOwner", fields: [ownerId], references: [id])
   ownerId Int
