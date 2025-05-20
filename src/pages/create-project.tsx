@@ -91,7 +91,7 @@ const ProjectCreationForm: React.FC = () => {
           newErrors.githubUrl = '올바른 GitHub 저장소 URL 형식이 아닙니다 (예: https://github.com/OWNER/REPO.git).';
           isValid = false;
         }
-      } catch { // 에러 객체를 사용하지 않으므로 변수 생략 (TypeScript 5.1+). 이전 버전에서는 catch (_e: unknown)
+      } catch { // 에러 객체를 사용하지 않으므로 변수 생략 (TypeScript 5.1+).
         newErrors.githubUrl = '올바른 URL 형식이 아닙니다.';
         isValid = false;
       }
@@ -101,7 +101,7 @@ const ProjectCreationForm: React.FC = () => {
       if (formData.defaultHelmValues.trim()) {
         JSON.parse(formData.defaultHelmValues);
       }
-    } catch { // 에러 객체를 사용하지 않으므로 변수 생략 (TypeScript 5.1+). 이전 버전에서는 catch (_e: unknown)
+    } catch { // 에러 객체를 사용하지 않으므로 변수 생략 (TypeScript 5.1+).
       newErrors.defaultHelmValues = 'Helm 값은 올바른 JSON 형식이거나 비워두어야 합니다.';
       isValid = false;
     }
@@ -133,11 +133,11 @@ const ProjectCreationForm: React.FC = () => {
       };
       console.log('서버로 전송할 데이터:', payload);
 
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 2000)); // 가상 API 호출 (2초 대기)
 
-      if (Math.random() > 0.5) {
+      if (Math.random() > 0.5) { // 가상 성공/실패 분기
         setSuccessMessage(`프로젝트 '${formData.projectName}' 생성 요청이 성공적으로 완료되었습니다! (도메인: ${formData.derivedDomain})`);
-        setFormData({
+        setFormData({ // 폼 초기화
           projectName: '',
           description: '',
           githubUrl: '',
@@ -145,21 +145,23 @@ const ProjectCreationForm: React.FC = () => {
           defaultHelmValues: '{\n  "replicaCount": 1,\n  "service": {\n    "type": "ClusterIP",\n    "port": 80\n  }\n}',
         });
       } else {
-        // 에러를 발생시킬 때 Error 객체를 사용하거나, 커스텀 에러 객체를 사용할 수 있습니다.
-        // 여기서는 간단히 Error 객체를 사용합니다.
         throw new Error('가상 서버 오류: 이미 사용중인 도메인이거나 내부 처리 오류입니다.');
       }
     } catch (error: unknown) { // 'any' 대신 'unknown' 사용
       console.error('API 호출 에러:', error);
       let errorMessage = '알 수 없는 에러가 발생했습니다.';
-      // 타입 가드를 사용하여 에러 메시지 추출
+
       if (error instanceof Error) {
         errorMessage = error.message;
       } else if (typeof error === 'string') {
         errorMessage = error;
-      } else if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as any).message === 'string') {
-        // 드물지만, error 객체가 Error 인스턴스는 아니지만 message 속성을 가질 경우
-        errorMessage = (error as any).message;
+      } else if (
+        typeof error === 'object' &&
+        error !== null &&
+        'message' in error && // error 객체 안에 'message'라는 키가 있는지 확인
+        typeof (error as { message: unknown }).message === 'string' // 해당 message 키의 값이 문자열인지 확인
+      ) {
+        errorMessage = (error as { message: string }).message; // 타입 단언 후 접근
       }
 
       setErrors(prevErrors => ({
@@ -171,21 +173,15 @@ const ProjectCreationForm: React.FC = () => {
     }
   };
 
-  // UI 렌더링 부분은 이전과 동일하게 유지됩니다.
-  // (이전 답변에서 제공된 JSX 코드를 여기에 그대로 붙여넣으면 됩니다.)
   return (
-    // 전체 페이지 배경 (GitHub의 매우 어두운 배경 느낌)
     <div className="min-h-screen bg-[#0d1117] text-gray-200 flex flex-col items-center py-10 px-4">
-      {/* 폼 컨테이너 (페이지 배경보다 약간 밝은 어두운 색) */}
       <div className="w-full max-w-2xl p-8 bg-[#161b22] shadow-2xl rounded-lg border border-[#30363d]">
         <div className="flex items-center mb-8">
-          {/* 로고 예시 (Intellisia 로고 SVG 또는 이미지로 교체 가능) */}
           <svg className="h-8 w-auto text-orange-400 mr-3" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
           </svg>
           <h1 className="text-3xl font-bold text-gray-100">새 프로젝트 생성</h1>
         </div>
-
 
         {errors.apiError && (
           <div className="mb-6 p-3 bg-red-500 bg-opacity-20 border border-red-500 text-red-300 rounded-md text-sm">
@@ -193,7 +189,6 @@ const ProjectCreationForm: React.FC = () => {
           </div>
         )}
         {successMessage && (
-          // 이미지의 성공 메시지와 유사한 스타일
           <div className="mb-6 p-4 bg-green-500 bg-opacity-10 border border-green-500 border-opacity-30 text-green-300 rounded-md text-sm">
             {successMessage}
           </div>
@@ -210,7 +205,6 @@ const ProjectCreationForm: React.FC = () => {
               id="projectName"
               value={formData.projectName}
               onChange={handleChange}
-              // 입력 필드 배경 및 테두리 (GitHub 입력 필드 느낌)
               className={`w-full px-3 py-2 bg-[#010409] border ${
                 errors.projectName ? 'border-red-600' : 'border-[#30363d]'
               } rounded-md focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500 text-gray-200`}
@@ -262,7 +256,6 @@ const ProjectCreationForm: React.FC = () => {
               id="derivedDomain"
               value={formData.derivedDomain}
               readOnly
-              // 읽기 전용 필드 스타일
               className="w-full px-3 py-2 bg-[#0d1117] border border-[#30363d] rounded-md text-gray-400 cursor-not-allowed"
             />
             <p className="mt-1 text-xs text-gray-500">
@@ -292,7 +285,6 @@ const ProjectCreationForm: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
-              // 버튼 스타일 (GitHub의 파란색 버튼 느낌)
               className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isLoading ? (
