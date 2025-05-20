@@ -22,18 +22,20 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PLATFORM_GITHUB_TOKEN }}
         run: |
+          # 입력받은 ref(branch/tag)로 타겟 레포지토리를 클론
           git clone --branch ${{ github.event.inputs.ref }} \
             https://$GH_TOKEN@github.com/${{ github.event.inputs.repo }} target-repo
 
       # 2. Docker Buildx 셋업
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v3 # 멀티플랫폼 빌드를 위한 Buildx 환경 구성
 
       # 3. 이미지 빌드
       - name: Build Docker image
         id: build
         run: |
           cd target-repo
+          # Docker 이미지를 빌드하고 성공 여부를 status에 기록
           if docker build -t temp-image .; then
             echo "status=success" >> $GITHUB_OUTPUT
           else
@@ -43,6 +45,7 @@ jobs:
       # 4. 빌드 결과를 백엔드로 전송
       - name: Upload result to backend
         run: |
+          # 빌드 성공/실패 결과를 callbackUrl로 POST 요청하여 알림
           if [ "${{ steps.build.outputs.status }}" = "success" ]; then
             curl -X POST "${{ github.event.inputs.callbackUrl }}?versionId=${{ github.event.inputs.versionId }}&status=success"
           else
