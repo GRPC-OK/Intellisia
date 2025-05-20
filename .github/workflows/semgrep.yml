@@ -29,35 +29,38 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install Semgrep and jq
-        run: |
-          pip install semgrep
-          sudo apt-get update && sudo apt-get install -y jq
+      - name: Install Semgrep
+        run: pip install semgrep
 
-      - name: Run Semgrep and extract results only
+      - name: Run Semgrep and save SARIF
         id: semgrep
         run: |
+          mkdir -p output
           cd target-repo
-          if semgrep --config=p/default --sarif > ../semgrep-full.sarif 2> ../semgrep-error.log; then
-            jq '.runs[0].results' ../semgrep-full.sarif > ../semgrep-results.json
+          if semgrep --config=p/default --sarif > ../output/full.sarif 2> ../output/error.log; then
             echo "status=success" >> $GITHUB_OUTPUT
           else
             echo "status=fail" >> $GITHUB_OUTPUT
           fi
 
-      - name: Debug extracted Semgrep results (for inspection)
+      - name: Debug Semgrep full SARIF output
+        if: steps.semgrep.outputs.status == 'success'
         run: |
-          echo "=== Extracted Semgrep Results ==="
-          cat ../semgrep-results.json
+          echo "=== Semgrep full SARIF ==="
+          cat output/full.sarif
 
-      - name: Upload result to backend (optimized)
+      - name: Upload result to backend
         run: |
           if [ "${{ steps.semgrep.outputs.status }}" = "success" ]; then
+            echo "=== Uploading full SARIF JSON to backend ==="
+            cat output/full.sarif
             curl -X POST "${{ github.event.inputs.callbackUrl }}?versionId=${{ github.event.inputs.versionId }}" \
               -H "Content-Type: application/json" \
-              --data-binary @semgrep-results.json
+              --data-binary @output/full.sarif
           else
+            echo "=== Uploading error log to backend ==="
+            cat output/error.log
             curl -X POST "${{ github.event.inputs.callbackUrl }}?versionId=${{ github.event.inputs.versionId }}" \
               -H "Content-Type: text/plain" \
-              --data-binary @semgrep-error.log
+              --data-binary @output/error.log
           fi
