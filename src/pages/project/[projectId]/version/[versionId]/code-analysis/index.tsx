@@ -10,7 +10,7 @@ import type { CodeIssue, CodeAnalysisResult } from '@/types/code-analysis';
 
 export default function CodeAnalysisPage() {
   const router = useRouter();
-  const { versionId } = router.query;
+  const { projectId, versionId } = router.query;
 
   const [versionName, setVersionName] = useState('');
   const [projectName, setProjectName] = useState('');
@@ -21,21 +21,23 @@ export default function CodeAnalysisPage() {
   const [errorLog, setErrorLog] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!versionId) return;
+    if (!projectId || !versionId) return;
 
     const fetchData = async () => {
       try {
         const versionRes = await fetch(`/api/versions/${versionId}`);
         const versionData = await versionRes.json();
+
         setVersionName(versionData.name);
         setProjectName(versionData.project.name);
         setOwnerName(versionData.project.owner.name);
 
+        // codeStatus가 pending 또는 none이면 리다이렉트
         if (
           versionData.codeStatus === 'pending' ||
           versionData.codeStatus === 'none'
         ) {
-          router.replace(`/version/${versionId}`);
+          router.replace(`/projects/${projectId}`);
           return;
         }
 
@@ -50,6 +52,7 @@ export default function CodeAnalysisPage() {
         ) {
           setStatus(analysisData.status);
         }
+
         setHasIssue(analysisData.hasIssue ?? false);
         setIssues(analysisData.issues ?? []);
         setErrorLog(analysisData.errorLog ?? null);
@@ -59,24 +62,25 @@ export default function CodeAnalysisPage() {
     };
 
     fetchData();
-  }, [versionId, router]);
+  }, [projectId, versionId, router]);
 
   const handleIssueClick = (issue: CodeIssue) => {
-    router.push(`/version/${versionId}/issues/${issue.id}`);
+    router.push(
+      `/project/${projectId}/version/${versionId}/code-analysis/${issue.id}`
+    );
   };
 
   return (
     <>
       <Head>
-        <title>{projectName} - 정적 분석</title>
+        <title>{`${projectName} - 정적 분석`}</title>
       </Head>
 
-      <div className="bg-[#0d1117] min-h-screen px-6 py-8 max-w-7xl mx-auto">
+      <div className="bg-[#0d1117] min-h-screen px-4 sm:px-6 py-8 max-w-7xl mx-auto">
         <ProjectHeader
           projectName={`${projectName} / v${versionName}`}
           creatorName={ownerName}
         />
-
         <CodeAnalysisStatusView
           status={status}
           hasIssue={hasIssue}
