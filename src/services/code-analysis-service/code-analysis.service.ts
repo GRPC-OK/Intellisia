@@ -2,6 +2,7 @@ import prisma from '@/lib/prisma';
 import { updateVersionStatusSafely } from '@/services/version-service/version-status-updater.service';
 import type { SarifCodeIssue, RawSarif } from '@/types/sarif';
 import { extractSemgrepIssuesWithRule } from '@/utils/parseSarifSemgrep';
+import type { Prisma } from '@prisma/client';
 
 export async function handleSemgrepResult(
   versionId: number,
@@ -35,7 +36,8 @@ export async function handleSemgrepResult(
   try {
     const sarif = sarifRaw as RawSarif;
     const issues: SarifCodeIssue[] = extractSemgrepIssuesWithRule(sarif);
-    await prisma.$transaction(async (tx) => {
+
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const analysis = await tx.codeAnalysis.upsert({
         where: { versionId },
         update: {
