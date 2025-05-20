@@ -2,7 +2,6 @@
 import { useState, ChangeEvent, FormEvent } from 'react';
 import { useRouter } from 'next/router';
 
-// 프로젝트 생성 요청 시 보낼 데이터 타입 정의
 interface CreateProjectData {
   projectName: string;
   subdomain: string;
@@ -11,13 +10,12 @@ interface CreateProjectData {
   techStack: string;
   cpu: number;
   memory: number;
-  applicationPort: number; // 네트워크 관련 필드는 이것만 남음
+  applicationPort: number;
 }
 
 const CreateProjectPage = () => {
   const router = useRouter();
 
-  // 각 입력 필드의 상태를 관리하는 state 변수들
   const [projectName, setProjectName] = useState('');
   const [subdomain, setSubdomain] = useState('');
   const [description, setDescription] = useState('');
@@ -25,11 +23,10 @@ const CreateProjectPage = () => {
   const [techStack, setTechStack] = useState('');
   const [cpu, setCpu] = useState<number>(1);
   const [memory, setMemory] = useState<number>(1);
-  const [applicationPort, setApplicationPort] = useState<number>(3000); // 기본 애플리케이션 포트
+  const [applicationPort, setApplicationPort] = useState<number>(3000);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 프로젝트 이름 변경 시 하위 도메인을 자동으로 생성하는 함수
   const handleProjectNameChange = (e: ChangeEvent<HTMLInputElement>) => {
     const newProjectName = e.target.value;
     setProjectName(newProjectName);
@@ -37,18 +34,16 @@ const CreateProjectPage = () => {
     setSubdomain(generatedSubdomain);
   };
 
-  // 각 입력 필드의 변경 이벤트를 처리하는 함수들
   const handleDescriptionChange = (e: ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value);
   const handleGitRepoUrlChange = (e: ChangeEvent<HTMLInputElement>) => setGitRepoUrl(e.target.value);
   const handleTechStackChange = (e: ChangeEvent<HTMLSelectElement>) => setTechStack(e.target.value);
-  const handleCpuChange = (e: ChangeEvent<HTMLInputElement>) => setCpu(parseInt(e.target.value, 10) || 1);
-  const handleMemoryChange = (e: ChangeEvent<HTMLInputElement>) => setMemory(parseInt(e.target.value, 10) || 1);
+  const handleCpuChange = (e: ChangeEvent<HTMLInputElement>) => setCpu(parseFloat(e.target.value) || 1); // parseFloat으로 변경
+  const handleMemoryChange = (e: ChangeEvent<HTMLInputElement>) => setMemory(parseFloat(e.target.value) || 1); // parseFloat으로 변경
   const handleApplicationPortChange = (e: ChangeEvent<HTMLInputElement>) => {
     const port = parseInt(e.target.value, 10);
-    setApplicationPort(isNaN(port) ? 0 : port); // 0 또는 다른 기본값/유효성 검사 필요
+    setApplicationPort(isNaN(port) ? 0 : port);
   };
 
-  // 폼 제출 이벤트 처리 함수
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
@@ -56,6 +51,16 @@ const CreateProjectPage = () => {
       setError('유효한 애플리케이션 포트 번호를 입력해주세요 (1-65535).');
       return;
     }
+    // CPU, Memory에 대한 추가적인 클라이언트 사이드 유효성 검사도 고려할 수 있습니다.
+    if (cpu <= 0) {
+        setError('CPU 값은 0보다 커야 합니다.');
+        return;
+    }
+    if (memory <= 0) {
+        setError('메모리 값은 0보다 커야 합니다.');
+        return;
+    }
+
 
     setLoading(true);
     setError(null);
@@ -84,19 +89,26 @@ const CreateProjectPage = () => {
         const result = await response.json();
         router.push(`/projects/${result.projectId}`);
       } else {
-        const errorData = await response.json();
+        // API가 JSON 형태의 에러 메시지를 반환한다고 가정
+        const errorData = await response.json().catch(() => ({ message: '응답 파싱 중 오류 발생' })); // .json() 실패 대비
         setError(errorData.message || '프로젝트 생성에 실패했습니다.');
       }
-    } catch (err: any) {
-      setError(err.message || 'API 요청 중 오류가 발생했습니다.');
+    } catch (err: unknown) { // err 타입을 unknown으로 변경
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('API 요청 중 알 수 없는 오류가 발생했습니다.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // JSX 부분은 이전과 동일하게 유지됩니다. (수정된 코드 스니펫에는 포함하지 않음)
+  // ... (이전 답변에서 제공된 JSX return 문 전체) ...
   return (
-    <div className="bg-gray-900 text-white p-6 rounded-md shadow-md max-w-2xl mx-auto"> {/* max-width 추가 */}
-      <h2 className="text-2xl font-bold mb-6 text-center">새 프로젝트 생성</h2> {/* 스타일 변경 */}
+    <div className="bg-gray-900 text-white p-6 rounded-md shadow-md max-w-2xl mx-auto">
+      <h2 className="text-2xl font-bold mb-6 text-center">새 프로젝트 생성</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label htmlFor="projectName" className="block text-gray-300 text-sm font-bold mb-2">
@@ -158,14 +170,13 @@ const CreateProjectPage = () => {
             className="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-800 text-white leading-tight focus:outline-none focus:shadow-outline"
             value={techStack}
             onChange={handleTechStackChange}
-            required // 기술 스택도 필수로 가정
+            required
           >
             <option value="">선택하세요</option>
             <option value="javascript-nodejs">JavaScript (Node.js)</option>
             <option value="python-fastapi">Python (FastAPI)</option>
             <option value="java-springboot">Java (Spring Boot)</option>
             <option value="go-gin">Go (Gin)</option>
-            {/* 다른 기술 스택 옵션 추가 */}
           </select>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -179,8 +190,8 @@ const CreateProjectPage = () => {
               className="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-800 text-white leading-tight focus:outline-none focus:shadow-outline"
               value={cpu}
               onChange={handleCpuChange}
-              min="1"
-              step="0.1" // CPU는 소수점 단위도 가능할 수 있음
+              min="0.1" // 최소값을 0.1 등으로 설정 가능
+              step="0.1"
               required
             />
           </div>
@@ -194,14 +205,13 @@ const CreateProjectPage = () => {
               className="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-800 text-white leading-tight focus:outline-none focus:shadow-outline"
               value={memory}
               onChange={handleMemoryChange}
-              min="0.5" // 메모리도 소수점 단위 가능할 수 있음
+              min="0.1" // 최소값을 0.1 등으로 설정 가능
               step="0.1"
               required
             />
           </div>
         </div>
 
-        {/* --- 네트워크 설정 (최종 간소화된 부분) --- */}
         <div className="border-t border-gray-700 pt-6 mt-6">
             <h3 className="text-lg font-semibold mb-4 text-gray-200">네트워크 설정</h3>
             <p className="text-sm text-gray-400 mb-4">모든 프로젝트는 기본적으로 외부 공개되며, 애플리케이션 내부 포트를 지정해주세요.</p>
@@ -226,7 +236,6 @@ const CreateProjectPage = () => {
               </p>
             </div>
         </div>
-        {/* --- 여기까지 네트워크 설정 --- */}
 
         <button
           type="submit"
