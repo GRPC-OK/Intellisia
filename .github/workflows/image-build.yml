@@ -1,0 +1,50 @@
+name: Run Image Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      versionId:
+        required: true
+      callbackUrl:
+        required: true
+      repo:
+        required: true
+      ref:
+        required: true
+
+jobs:
+  image-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 레포지토리 클론
+      - name: Clone target repository
+        env:
+          GH_TOKEN: ${{ secrets.PLATFORM_GITHUB_TOKEN }}
+        run: |
+          git clone --branch ${{ github.event.inputs.ref }} \
+            https://$GH_TOKEN@github.com/${{ github.event.inputs.repo }} target-repo
+
+      # 2. Docker Buildx 셋업
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 3. 이미지 빌드
+      - name: Build Docker image
+        id: build
+        run: |
+          cd target-repo
+          if docker build -t temp-image .; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=fail" >> $GITHUB_OUTPUT
+          fi
+
+      # 4. 빌드 결과를 백엔드로 전송
+      - name: Upload result to backend
+        run: |
+          if [ "${{ steps.build.outputs.status }}" = "success" ]; then
+            curl -X POST "${{ github.event.inputs.callbackUrl }}?versionId=${{ github.event.inputs.versionId }}&status=success"
+          else
+            curl -X POST "${{ github.event.inputs.callbackUrl }}?versionId=${{ github.event.inputs.versionId }}&status=fail"
+          fi
