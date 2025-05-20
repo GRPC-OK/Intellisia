@@ -1,4 +1,4 @@
-//create-project.tsx
+// components/ProjectCreationForm.tsx
 
 import React, { useState, ChangeEvent, FormEvent, useEffect } from 'react';
 
@@ -30,8 +30,6 @@ const slugifyProjectName = (name: string): string => {
 };
 
 const ProjectCreationForm: React.FC = () => {
-  // Intellisia.app과 같은 실제 운영 도메인으로 변경할 예정입니다.
-  // 혹은, 환경 변수에서 이 값을 가져오는게 좋을까요?
   const BASE_DOMAIN = 'intellisia.app'; // 예시 기본 도메인
 
   const [formData, setFormData] = useState<FormData>({
@@ -93,7 +91,7 @@ const ProjectCreationForm: React.FC = () => {
           newErrors.githubUrl = '올바른 GitHub 저장소 URL 형식이 아닙니다 (예: https://github.com/OWNER/REPO.git).';
           isValid = false;
         }
-      } catch (_) {
+      } catch { // 에러 객체를 사용하지 않으므로 변수 생략 (TypeScript 5.1+). 이전 버전에서는 catch (_e: unknown)
         newErrors.githubUrl = '올바른 URL 형식이 아닙니다.';
         isValid = false;
       }
@@ -103,7 +101,7 @@ const ProjectCreationForm: React.FC = () => {
       if (formData.defaultHelmValues.trim()) {
         JSON.parse(formData.defaultHelmValues);
       }
-    } catch (e) {
+    } catch { // 에러 객체를 사용하지 않으므로 변수 생략 (TypeScript 5.1+). 이전 버전에서는 catch (_e: unknown)
       newErrors.defaultHelmValues = 'Helm 값은 올바른 JSON 형식이거나 비워두어야 합니다.';
       isValid = false;
     }
@@ -147,19 +145,34 @@ const ProjectCreationForm: React.FC = () => {
           defaultHelmValues: '{\n  "replicaCount": 1,\n  "service": {\n    "type": "ClusterIP",\n    "port": 80\n  }\n}',
         });
       } else {
+        // 에러를 발생시킬 때 Error 객체를 사용하거나, 커스텀 에러 객체를 사용할 수 있습니다.
+        // 여기서는 간단히 Error 객체를 사용합니다.
         throw new Error('가상 서버 오류: 이미 사용중인 도메인이거나 내부 처리 오류입니다.');
       }
-    } catch (error: any) {
+    } catch (error: unknown) { // 'any' 대신 'unknown' 사용
       console.error('API 호출 에러:', error);
+      let errorMessage = '알 수 없는 에러가 발생했습니다.';
+      // 타입 가드를 사용하여 에러 메시지 추출
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as any).message === 'string') {
+        // 드물지만, error 객체가 Error 인스턴스는 아니지만 message 속성을 가질 경우
+        errorMessage = (error as any).message;
+      }
+
       setErrors(prevErrors => ({
         ...prevErrors,
-        apiError: error.message || '알 수 없는 에러가 발생했습니다.',
+        apiError: errorMessage,
       }));
     } finally {
       setIsLoading(false);
     }
   };
 
+  // UI 렌더링 부분은 이전과 동일하게 유지됩니다.
+  // (이전 답변에서 제공된 JSX 코드를 여기에 그대로 붙여넣으면 됩니다.)
   return (
     // 전체 페이지 배경 (GitHub의 매우 어두운 배경 느낌)
     <div className="min-h-screen bg-[#0d1117] text-gray-200 flex flex-col items-center py-10 px-4">
