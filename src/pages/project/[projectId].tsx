@@ -18,19 +18,17 @@ export default function ProjectDetailPage() {
   const [versions, setVersions] = useState<VersionSummary[]>([]);
   const [sort, setSort] = useState<'newest' | 'oldest'>('oldest');
   const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
 
   useEffect(() => {
     if (typeof projectId !== 'string') return;
 
     const fetchProject = async () => {
-      if (initialLoading) setLoading(true);
+      setLoading(true);
       const res = await fetch(`/api/projects/${projectId}?sort=${sort}`);
       const data = await res.json();
       setProject(data);
       setVersions(data.versions);
       setLoading(false);
-      setInitialLoading(false);
     };
 
     fetchProject();
