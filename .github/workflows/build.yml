@@ -26,18 +26,6 @@ jobs:
           docker tag ${{ secrets.DOCKERHUB_USERNAME }}/my-app:${{ github.sha }} ${{ secrets.DOCKERHUB_USERNAME }}/my-app:latest
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/my-app:latest
 
-      # 2.5. DB 마이그레이션 실행
-      - name: Run DB migration
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: |
-          if [ -f "package.json" ] && grep -q prisma package.json; then
-            npm install
-            npx prisma migrate deploy
-          else
-            echo "Prisma not found, skipping migration."
-          fi
-
   deploy:
     runs-on: ubuntu-latest
     needs: build-and-push  # build-and-push 작업 완료 후 실행
@@ -52,4 +40,6 @@ jobs:
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/my-app:latest
             docker stop my-container || true
             docker rm my-container || true
-            docker run -d --name my-container -p 3000:3000 ${{ secrets.DOCKERHUB_USERNAME }}/my-app:latest
+            docker run -d --name my-container -p 3000:3000 \
+              -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
+              ${{ secrets.DOCKERHUB_USERNAME }}/my-app:latest

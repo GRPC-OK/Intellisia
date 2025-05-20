@@ -16,8 +16,12 @@ COPY . ./
 # 애플리케이션 빌드
 RUN npm run build
 
+# entrypoint.sh를 복사하고 실행 권한을 부여
+COPY entrypoint.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh
+
 # 앱이 실행될 포트 노출
 EXPOSE 3000
 
 # 애플리케이션 시작
-CMD [ "npm", "start" ]
+CMD ["./entrypoint.sh"]
