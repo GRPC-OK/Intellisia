@@ -20,4 +20,4 @@ RUN npm run build
 EXPOSE 3000
 
 # 애플리케이션 시작
-CMD [ "npm", "start" ]
+CMD ["./entrypoint.sh"]
