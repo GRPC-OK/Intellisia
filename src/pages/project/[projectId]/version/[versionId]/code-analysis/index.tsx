@@ -23,6 +23,10 @@ export default function CodeAnalysisPage() {
   useEffect(() => {
     if (!projectId || !versionId) return;
 
+    const redirectToProject = () => {
+      router.replace(`/projects/${projectId}`);
+    };
+
     const fetchData = async () => {
       try {
         const versionRes = await fetch(`/api/versions/${versionId}`);
@@ -32,12 +36,11 @@ export default function CodeAnalysisPage() {
         setProjectName(versionData.project.name);
         setOwnerName(versionData.project.owner.name);
 
-        // codeStatus가 pending 또는 none이면 리다이렉트
         if (
           versionData.codeStatus === 'pending' ||
           versionData.codeStatus === 'none'
         ) {
-          router.replace(`/projects/${projectId}`);
+          redirectToProject();
           return;
         }
 
@@ -66,7 +69,7 @@ export default function CodeAnalysisPage() {
 
   const handleIssueClick = (issue: CodeIssue) => {
     router.push(
-      `/project/${projectId}/version/${versionId}/code-analysis/${issue.id}`
+      `/projects/${projectId}/versions/${versionId}/code-analysis/${issue.id}`
     );
   };
 
