@@ -111,6 +111,11 @@ model CodeIssue {
   @@index([codeAnalysisId])
 }
 
+model sunwoo{
+  id Int
+  name String
+}
+
 enum StepStatus {
   none
   pending
