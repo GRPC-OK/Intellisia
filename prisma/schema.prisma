@@ -135,6 +135,12 @@ model CodeIssue {
   @@index([codeAnalysisId])
 }
 
+model test{
+  id Int @id @default(autoincrement())
+  testname String
+  testage String
+}
+
 // ==================== enum ====================
 enum StepStatus {
   none
