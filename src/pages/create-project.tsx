@@ -1,4 +1,4 @@
-// components/ProjectCreationForm.tsx
+// create-project.tsx
 
 import React, { useState, ChangeEvent, FormEvent, useEffect } from 'react';
 
@@ -8,7 +8,9 @@ interface FormData {
   description: string;
   githubUrl: string;
   derivedDomain: string;
-  defaultHelmValues: string;
+  // 최소한의 Helm 값 필드
+  helmReplicaCount: string; // 숫자지만 입력 편의를 위해 string, 추후 number로 변환
+  containerPort: string;   // 애플리케이션/컨테이너 포트, 숫자지만 string으로 받고 변환
 }
 
 // 폼 필드별 에러 메시지 타입을 정의합니다.
@@ -16,17 +18,17 @@ interface FormErrors {
   projectName?: string;
   description?: string;
   githubUrl?: string;
-  defaultHelmValues?: string;
+  helmReplicaCount?: string;
+  containerPort?: string;
   apiError?: string;
 }
 
-// 프로젝트 이름을 URL 친화적인 형태로 변환하는 헬퍼 함수
 const slugifyProjectName = (name: string): string => {
   return name
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, '-') // 공백을 하이픈으로 변경
-    .replace(/[^\w-]+/g, ''); // 영숫자, 하이픈 이외의 문자 제거
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]+/g, '');
 };
 
 const ProjectCreationForm: React.FC = () => {
@@ -37,7 +39,8 @@ const ProjectCreationForm: React.FC = () => {
     description: '',
     githubUrl: '',
     derivedDomain: `.${BASE_DOMAIN}`,
-    defaultHelmValues: '{\n  "replicaCount": 1,\n  "service": {\n    "type": "ClusterIP",\n    "port": 80\n  }\n}',
+    helmReplicaCount: '1', // 기본 레플리카 수
+    containerPort: '8080', // 일반적인 웹 애플리케이션 기본 포트 예시
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -52,8 +55,7 @@ const ProjectCreationForm: React.FC = () => {
     }));
   }, [formData.projectName, BASE_DOMAIN]);
 
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prevData => ({
       ...prevData,
@@ -73,6 +75,7 @@ const ProjectCreationForm: React.FC = () => {
     const newErrors: FormErrors = {};
     let isValid = true;
 
+    // 프로젝트 이름, GitHub URL 유효성 검사
     if (!formData.projectName.trim()) {
       newErrors.projectName = '프로젝트 이름은 필수입니다.';
       isValid = false;
@@ -91,18 +94,22 @@ const ProjectCreationForm: React.FC = () => {
           newErrors.githubUrl = '올바른 GitHub 저장소 URL 형식이 아닙니다 (예: https://github.com/OWNER/REPO.git).';
           isValid = false;
         }
-      } catch { // 에러 객체를 사용하지 않으므로 변수 생략 (TypeScript 5.1+).
+      } catch {
         newErrors.githubUrl = '올바른 URL 형식이 아닙니다.';
         isValid = false;
       }
     }
 
-    try {
-      if (formData.defaultHelmValues.trim()) {
-        JSON.parse(formData.defaultHelmValues);
-      }
-    } catch { // 에러 객체를 사용하지 않으므로 변수 생략 (TypeScript 5.1+).
-      newErrors.defaultHelmValues = 'Helm 값은 올바른 JSON 형식이거나 비워두어야 합니다.';
+    // Helm 값 유효성 검사
+    const replicaCount = parseInt(formData.helmReplicaCount, 10);
+    if (isNaN(replicaCount) || replicaCount < 0) {
+      newErrors.helmReplicaCount = '레플리카 카운트는 0 이상의 숫자여야 합니다.';
+      isValid = false;
+    }
+
+    const port = parseInt(formData.containerPort, 10);
+    if (isNaN(port) || port <= 0 || port > 65535) {
+      newErrors.containerPort = '유효한 포트 번호(1-65535)를 입력해주세요.';
       isValid = false;
     }
 
@@ -118,22 +125,35 @@ const ProjectCreationForm: React.FC = () => {
     if (!validateForm()) {
       return;
     }
-
     setIsLoading(true);
 
     try {
+      // 프론트엔드에서 입력받은 개별 Helm 값들을 defaultHelmValues JSON 객체로 조립
+      // 이 구조는 백엔드와 협의된 최종 defaultHelmValues의 부분 집합이 될 수 있습니다.
+      const defaultHelmValues = {
+        replicaCount: parseInt(formData.helmReplicaCount, 10),
+        // 애플리케이션(컨테이너) 포트는 service.targetPort 또는
+        // deployment.containerPort 등으로 매핑될 수 있습니다.
+        // 여기서는 일반적인 K8s 서비스의 targetPort를 가정합니다.
+        service: {
+          targetPort: parseInt(formData.containerPort, 10),
+          // service.port 와 service.type 등은 배포 준비 페이지에서 설정하거나
+          // 플랫폼의 기본 Helm Chart에서 지능적으로 기본값을 가질 수 있습니다.
+          // 예: targetPort와 동일하게 설정하거나, Ingress 사용시 80으로 자동 설정 등
+        },
+        // resources (cpu, memory) 등은 배포 준비 페이지에서 설정
+      };
+
       const payload = {
         projectName: formData.projectName,
         description: formData.description,
         githubUrl: formData.githubUrl,
         domain: formData.derivedDomain,
-        defaultHelmValues: formData.defaultHelmValues.trim()
-          ? JSON.parse(formData.defaultHelmValues)
-          : {},
+        defaultHelmValues: defaultHelmValues, // 최소한의 정보로 구성된 JSON 객체
       };
       console.log('서버로 전송할 데이터:', payload);
 
-      await new Promise(resolve => setTimeout(resolve, 2000)); // 가상 API 호출 (2초 대기)
+      await new Promise(resolve => setTimeout(resolve, 2000)); // 가상 API 호출
 
       if (Math.random() > 0.5) { // 가상 성공/실패 분기
         setSuccessMessage(`프로젝트 '${formData.projectName}' 생성 요청이 성공적으로 완료되었습니다! (도메인: ${formData.derivedDomain})`);
@@ -142,15 +162,15 @@ const ProjectCreationForm: React.FC = () => {
           description: '',
           githubUrl: '',
           derivedDomain: `.${BASE_DOMAIN}`,
-          defaultHelmValues: '{\n  "replicaCount": 1,\n  "service": {\n    "type": "ClusterIP",\n    "port": 80\n  }\n}',
+          helmReplicaCount: '1',
+          containerPort: '8080',
         });
       } else {
         throw new Error('가상 서버 오류: 이미 사용중인 도메인이거나 내부 처리 오류입니다.');
       }
-    } catch (error: unknown) { // 'any' 대신 'unknown' 사용
+    } catch (error: unknown) {
       console.error('API 호출 에러:', error);
       let errorMessage = '알 수 없는 에러가 발생했습니다.';
-
       if (error instanceof Error) {
         errorMessage = error.message;
       } else if (typeof error === 'string') {
@@ -158,16 +178,12 @@ const ProjectCreationForm: React.FC = () => {
       } else if (
         typeof error === 'object' &&
         error !== null &&
-        'message' in error && // error 객체 안에 'message'라는 키가 있는지 확인
-        typeof (error as { message: unknown }).message === 'string' // 해당 message 키의 값이 문자열인지 확인
+        'message' in error &&
+        typeof (error as { message: unknown }).message === 'string'
       ) {
-        errorMessage = (error as { message: string }).message; // 타입 단언 후 접근
+        errorMessage = (error as { message: string }).message;
       }
-
-      setErrors(prevErrors => ({
-        ...prevErrors,
-        apiError: errorMessage,
-      }));
+      setErrors(prevErrors => ({ ...prevErrors, apiError: errorMessage, }));
     } finally {
       setIsLoading(false);
     }
@@ -195,93 +211,121 @@ const ProjectCreationForm: React.FC = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="projectName" className="block text-sm font-medium text-gray-400 mb-1">
-              프로젝트 이름 <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="text"
-              name="projectName"
-              id="projectName"
-              value={formData.projectName}
-              onChange={handleChange}
-              className={`w-full px-3 py-2 bg-[#010409] border ${
-                errors.projectName ? 'border-red-600' : 'border-[#30363d]'
-              } rounded-md focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500 text-gray-200`}
-              placeholder="예: My Awesome App"
-            />
-            {errors.projectName && <p className="mt-1 text-xs text-red-400">{errors.projectName}</p>}
-          </div>
+          {/* 프로젝트 기본 정보 섹션 */}
+          <fieldset className="space-y-6">
+            <legend className="text-lg font-semibold text-gray-300 mb-3">프로젝트 정보</legend>
+            {/* 프로젝트 이름 */}
+            <div>
+              <label htmlFor="projectName" className="block text-sm font-medium text-gray-400 mb-1">
+                프로젝트 이름 <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                name="projectName"
+                id="projectName"
+                value={formData.projectName}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 bg-[#010409] border ${errors.projectName ? 'border-red-600' : 'border-[#30363d]'} rounded-md focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500 text-gray-200`}
+                placeholder="예: My Awesome App"
+              />
+              {errors.projectName && <p className="mt-1 text-xs text-red-400">{errors.projectName}</p>}
+            </div>
 
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-400 mb-1">
-              설명
-            </label>
-            <textarea
-              name="description"
-              id="description"
-              rows={3}
-              value={formData.description}
-              onChange={handleChange}
-              className="w-full px-3 py-2 bg-[#010409] border border-[#30363d] rounded-md focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500 text-gray-200"
-              placeholder="프로젝트에 대한 간략한 설명을 입력하세요."
-            />
-          </div>
+            {/* 설명 */}
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium text-gray-400 mb-1">
+                설명
+              </label>
+              <textarea
+                name="description"
+                id="description"
+                rows={3}
+                value={formData.description}
+                onChange={handleChange}
+                className="w-full px-3 py-2 bg-[#010409] border border-[#30363d] rounded-md focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500 text-gray-200"
+                placeholder="프로젝트에 대한 간략한 설명을 입력하세요."
+              />
+            </div>
 
-          <div>
-            <label htmlFor="githubUrl" className="block text-sm font-medium text-gray-400 mb-1">
-              GitHub 저장소 주소 (.git으로 끝나야 함) <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="url"
-              name="githubUrl"
-              id="githubUrl"
-              value={formData.githubUrl}
-              onChange={handleChange}
-              className={`w-full px-3 py-2 bg-[#010409] border ${
-                errors.githubUrl ? 'border-red-600' : 'border-[#30363d]'
-              } rounded-md focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500 text-gray-200`}
-              placeholder="예: https://github.com/OWNER/REPOSITORY_NAME.git"
-            />
-            {errors.githubUrl && <p className="mt-1 text-xs text-red-400">{errors.githubUrl}</p>}
-          </div>
+            {/* GitHub 저장소 주소 */}
+            <div>
+              <label htmlFor="githubUrl" className="block text-sm font-medium text-gray-400 mb-1">
+                GitHub 저장소 주소 (.git으로 끝나야 함) <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="url"
+                name="githubUrl"
+                id="githubUrl"
+                value={formData.githubUrl}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 bg-[#010409] border ${errors.githubUrl ? 'border-red-600' : 'border-[#30363d]'} rounded-md focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500 text-gray-200`}
+                placeholder="예: https://github.com/OWNER/REPOSITORY_NAME.git"
+              />
+              {errors.githubUrl && <p className="mt-1 text-xs text-red-400">{errors.githubUrl}</p>}
+            </div>
 
-          <div>
-            <label htmlFor="derivedDomain" className="block text-sm font-medium text-gray-400 mb-1">
-              생성될 도메인 (프로젝트 이름 기반)
-            </label>
-            <input
-              type="text"
-              name="derivedDomain"
-              id="derivedDomain"
-              value={formData.derivedDomain}
-              readOnly
-              className="w-full px-3 py-2 bg-[#0d1117] border border-[#30363d] rounded-md text-gray-400 cursor-not-allowed"
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              전체 URL은 <code className="text-xs text-blue-400 bg-gray-700 px-1 py-0.5 rounded">https://{formData.derivedDomain || `[project-name].${BASE_DOMAIN}`}</code> 형식이 됩니다.
-            </p>
-          </div>
+            {/* 생성될 도메인 */}
+            <div>
+              <label htmlFor="derivedDomain" className="block text-sm font-medium text-gray-400 mb-1">
+                생성될 도메인 (프로젝트 이름 기반)
+              </label>
+              <input
+                type="text"
+                name="derivedDomain"
+                id="derivedDomain"
+                value={formData.derivedDomain}
+                readOnly
+                className="w-full px-3 py-2 bg-[#0d1117] border border-[#30363d] rounded-md text-gray-400 cursor-not-allowed"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                전체 URL은 <code className="text-xs text-blue-400 bg-gray-700 px-1 py-0.5 rounded">https://{formData.derivedDomain || `[project-name].${BASE_DOMAIN}`}</code> 형식이 됩니다.
+              </p>
+            </div>
+          </fieldset>
 
-          <div>
-            <label htmlFor="defaultHelmValues" className="block text-sm font-medium text-gray-400 mb-1">
-              기본 Helm 값 (JSON 형식)
-            </label>
-            <textarea
-              name="defaultHelmValues"
-              id="defaultHelmValues"
-              rows={6}
-              value={formData.defaultHelmValues}
-              onChange={handleChange}
-              className={`w-full px-3 py-2 bg-[#010409] border font-mono text-sm ${
-                errors.defaultHelmValues ? 'border-red-600' : 'border-[#30363d]'
-              } rounded-md focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500 text-gray-200`}
-              placeholder='예: {\n  "replicaCount": 1,\n  "image": {\n    "repository": "nginx",\n    "tag": "stable"\n  }\n}'
-            />
-            {errors.defaultHelmValues && <p className="mt-1 text-xs text-red-400">{errors.defaultHelmValues}</p>}
-          </div>
+          {/* 초기 실행 설정 (최소 Helm 값) */}
+          <fieldset className="space-y-6 pt-6 border-t border-[#30363d]">
+            <legend className="text-lg font-semibold text-gray-300 mb-3">초기 실행 설정</legend>
+            
+            {/* 레플리카 카운트 */}
+            <div>
+              <label htmlFor="helmReplicaCount" className="block text-sm font-medium text-gray-400 mb-1">
+                레플리카 수 (초기 인스턴스) <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="number"
+                name="helmReplicaCount"
+                id="helmReplicaCount"
+                value={formData.helmReplicaCount}
+                onChange={handleChange}
+                min="0"
+                className={`w-full px-3 py-2 bg-[#010409] border ${errors.helmReplicaCount ? 'border-red-600' : 'border-[#30363d]'} rounded-md focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500 text-gray-200`}
+              />
+              {errors.helmReplicaCount && <p className="mt-1 text-xs text-red-400">{errors.helmReplicaCount}</p>}
+            </div>
 
-          <div>
+            {/* 애플리케이션 포트 번호 */}
+            <div>
+              <label htmlFor="containerPort" className="block text-sm font-medium text-gray-400 mb-1">
+                애플리케이션 포트 번호 <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="number"
+                name="containerPort"
+                id="containerPort"
+                value={formData.containerPort}
+                onChange={handleChange}
+                min="1"
+                max="65535"
+                className={`w-full px-3 py-2 bg-[#010409] border ${errors.containerPort ? 'border-red-600' : 'border-[#30363d]'} rounded-md focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500 text-gray-200`}
+                placeholder="예: 8080 (애플리케이션이 리스닝하는 포트)"
+              />
+              {errors.containerPort && <p className="mt-1 text-xs text-red-400">{errors.containerPort}</p>}
+            </div>
+          </fieldset>
+
+          {/* 제출 버튼 */}
+          <div className="pt-6">
             <button
               type="submit"
               disabled={isLoading}
