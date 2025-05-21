@@ -37,7 +37,7 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
           script: |
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/my-app:latest
-            docker stop my-container || true
-            docker rm my-container || true
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/my-app:latest && \
+            docker stop my-container || true && \
+            docker rm my-container || true && \
             docker run -d --name my-container -p 3000:3000 -e DATABASE_URL=${{ secrets.DATABASE_URL }} ${{ secrets.DOCKERHUB_USERNAME }}/my-app:latest
