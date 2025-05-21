@@ -7,88 +7,68 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 사용자
 model User {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
-  avatarUrl String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  id            Int                   @id @default(autoincrement())
+  name          String
+  email         String                @unique
+  avatarUrl     String
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
   projects      Project[]             @relation("ProjectOwner")
-  versions      Version[]
   contributions ProjectContributors[]
+  versions      Version[]
 }
 
-// 프로젝트 
 model Project {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String
-  githubUrl   String
-  domain      String   @unique
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  owner   User @relation("ProjectOwner", fields: [ownerId], references: [id])
-  ownerId Int
-
-  contributors ProjectContributors[]
-  versions     Version[]
-
-  // 프로젝트의 기본 Helm values 
+  id                Int                   @id @default(autoincrement())
+  name              String
+  description       String
+  githubUrl         String
+  domain            String                @unique
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  ownerId           Int
   defaultHelmValues Json?
+  owner             User                  @relation("ProjectOwner", fields: [ownerId], references: [id])
+  contributors      ProjectContributors[]
+  versions          Version[]
 }
 
-// 프로젝트 기여자 
 model ProjectContributors {
   id        Int     @id @default(autoincrement())
-  user      User    @relation(fields: [userId], references: [id])
   userId    Int
-  project   Project @relation(fields: [projectId], references: [id])
   projectId Int
+  project   Project @relation(fields: [projectId], references: [id])
+  user      User    @relation(fields: [userId], references: [id])
 
   @@unique([userId, projectId])
 }
 
-//  버전 
 model Version {
-  id              Int     @id @default(autoincrement())
+  id              Int           @id @default(autoincrement())
   name            String
   description     String
-  isCurrent       Boolean @default(false)
+  isCurrent       Boolean       @default(false)
   imageTag        String
   branch          String
   commitHash      String
   applicationName String
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // 상태 필드
-  codeStatus    StepStatus    @default(none)
-  buildStatus   StepStatus    @default(none)
-  imageStatus   StepStatus    @default(none)
-  approveStatus ApproveStatus @default(none)
-  deployStatus  StepStatus    @default(none)
-  flowStatus    FlowStatus    @default(none)
-
-  helmValues   HelmValues? @relation(name: "VersionHelmRelation", fields: [helmValuesId], references: [id])
-  helmValuesId Int?        @unique
-
-  // Project 연결
-  project   Project @relation(fields: [projectId], references: [id])
-  projectId Int
-
-  // 작성자
-  author   User @relation(fields: [authorId], references: [id])
-  authorId Int
-
-  codeAnalysis CodeAnalysis? @relation("CodeAnalysisForVersion")
-
-  // 코드 이슈
-  codeIssues CodeIssue[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  codeStatus      StepStatus    @default(none)
+  buildStatus     StepStatus    @default(none)
+  imageStatus     StepStatus    @default(none)
+  deployStatus    StepStatus    @default(none)
+  approveStatus   ApproveStatus @default(none)
+  flowStatus      FlowStatus    @default(none)
+  helmValuesId    Int?          @unique
+  projectId       Int
+  authorId        Int
+  codeAnalysis    CodeAnalysis? @relation("CodeAnalysisForVersion")
+  codeIssues      CodeIssue[]
+  author          User          @relation(fields: [authorId], references: [id])
+  helmValues      HelmValues?   @relation("VersionHelmRelation", fields: [helmValuesId], references: [id])
+  project         Project       @relation(fields: [projectId], references: [id])
 
   @@unique([projectId, name])
 }
@@ -97,51 +77,40 @@ model HelmValues {
   id        Int      @id @default(autoincrement())
   content   Json
   createdAt DateTime @default(now())
-
-  version Version? @relation(name: "VersionHelmRelation")
+  version   Version? @relation("VersionHelmRelation")
 }
 
-// 코드 정적 분석
 model CodeAnalysis {
   id        Int            @id @default(autoincrement())
   versionId Int            @unique
-  status    AnalysisStatus
-  hasIssue  Boolean
   errorLog  String?
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
-
-  version Version     @relation("CodeAnalysisForVersion", fields: [versionId], references: [id])
-  issues  CodeIssue[]
+  hasIssue  Boolean
+  status    AnalysisStatus
+  version   Version        @relation("CodeAnalysisForVersion", fields: [versionId], references: [id])
+  issues    CodeIssue[]
 }
 
 model CodeIssue {
-  id             Int     @id @default(autoincrement())
-  versionId      Int
+  id             Int          @id @default(autoincrement())
   codeAnalysisId Int
   ruleId         String
   message        String
-  severity   String?  
-  cwe        String? 
-  cve        String? 
+  severity       String?
   filePath       String
   line           Int
   column         Int?
-
-  version      Version      @relation(fields: [versionId], references: [id])
-  codeAnalysis CodeAnalysis @relation(fields: [codeAnalysisId], references: [id], onDelete: Cascade)
+  versionId      Int
+  cve            String?
+  cwe            String?
+  codeAnalysis   CodeAnalysis @relation(fields: [codeAnalysisId], references: [id], onDelete: Cascade)
+  version        Version      @relation(fields: [versionId], references: [id])
 
   @@index([versionId])
   @@index([codeAnalysisId])
 }
 
-model test{
-  id Int @id @default(autoincrement())
-  testname String
-  testage String
-}
-
-// ==================== enum ====================
 enum StepStatus {
   none
   pending
