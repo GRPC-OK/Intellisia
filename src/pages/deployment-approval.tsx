@@ -1,13 +1,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 
-interface Comment {
-  id: number;
-  author: string;
-  content: string;
-  timestamp: string;
-}
-
 export default function DeploymentApproval() {
   const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -258,4 +251,4 @@ export default function DeploymentApproval() {
       `}</style>
     </div>
   );
-} 
+}
