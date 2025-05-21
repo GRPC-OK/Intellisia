@@ -58,7 +58,7 @@ export default function Home() {
     }
 
     fetchGitHubData()
-  }, [session, githubData])
+  }, [session, githubData, setGithubData])
 
   // JSX 반환
   return (
