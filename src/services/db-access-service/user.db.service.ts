@@ -90,7 +90,7 @@ export const findAllUsersDB = async (
  * @param userId 업데이트할 사용자의 ID
  * @param updateData 업데이트할 사용자 데이터 (Prisma.UserUpdateInput 타입)
  * @returns 업데이트된 User 객체
- * @throws PrismaClientKnownRequestError 등 DB 관련 에러 발생 가능
+ * @throws PrismaClientKnownRequestError 등 DB 관련 에러 발생 가능합니다.
  */
 export const updateUserInDB = async (
   userId: number,
