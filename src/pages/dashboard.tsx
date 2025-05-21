@@ -14,7 +14,7 @@ export default function Dashboard() {
 
   // 프로젝트 등록(생성) 버튼 클릭 시 템플릿 페이지로 이동하는 함수
   const handleNewProject = () => {
-    router.push('/new-project'); // '/new-project' 페이지로 이동
+    router.push('/create-project'); // '/create-project' 페이지로 이동
   };
 
   // 프로젝트 목록 상태 관리 (초기값 빈 배열)
