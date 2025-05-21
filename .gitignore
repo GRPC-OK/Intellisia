@@ -42,3 +42,6 @@ next-env.d.ts
 
 # VSCode 개인 설정
 .vscode/
+
+# 테스트용 라우트 파일 지정
+pages/api/test/
