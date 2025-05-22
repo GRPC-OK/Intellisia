@@ -4,7 +4,7 @@ export function toProjectDetailDto(
   project: {
     id: number;
     name: string;
-    description: string;
+    description: string | null;
     githubUrl: string;
     domain: string;
     createdAt: Date;
@@ -19,7 +19,7 @@ export function toProjectDetailDto(
   return {
     id: project.id,
     name: project.name,
-    description: project.description,
+    description: project.description ?? 'null',
     githubUrl: project.githubUrl,
     domain: project.domain,
     createdAt: project.createdAt.toISOString(),
