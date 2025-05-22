@@ -37,8 +37,12 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
           script: |
-            printf "%s" "${{ secrets.ENV }}" | tee .env > /dev/null && \
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/my-app:latest && \
-            docker stop my-container || true && \
-            docker rm my-container || true && \
-            docker run -d --name my-container --env-file .env -p 3000:3000 -e DATABASE_URL=${{ secrets.DATABASE_URL }} ${{ secrets.DOCKERHUB_USERNAME }}/my-app:latest && rm -f .env
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/my-app:latest && \
+          docker stop my-container || true && \
+          docker rm my-container || true && \
+          printf "%s" "${{ secrets.ENV }}" | docker run -d \
+            --name my-container \
+            --env-file /dev/stdin \
+            -p 3000:3000 \
+            -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            ${{ secrets.DOCKERHUB_USERNAME }}/my-app:latest
