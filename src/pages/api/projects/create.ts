@@ -8,7 +8,7 @@ import { findProjectByDomainFromDB, createProjectInDB } from '@/services/db-acce
 // 여기에 인증 관련 함수/미들웨어를 import 하거나 직접 구현합니다.
 // 예시: import { getUserIdFromRequest } from '@/lib/auth';
 // 임시로 userId를 하드코딩하거나, 실제 인증 로직으로 대체해야 합니다.
-const getUserIdFromRequest = async (_req: NextApiRequest): Promise<number | null> => {
+const getUserIdFromRequest = async (): Promise<number | null> => {
   // 실제 인증 로직: 헤더의 토큰 검증, 세션 확인 등
   // 예시: const session = await getSession({ req }); if (session?.user?.id) return session.user.id;
   // 이 부분은 나중에 선우씨랑 논의해서 인증 로직 구현
