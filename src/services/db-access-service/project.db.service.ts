@@ -7,11 +7,15 @@ import { Project, Prisma } from '@prisma/client'; // Prisma에서 생성된 타�
  * @param projectData 생성할 프로젝트 데이터 (Prisma.ProjectCreateInput 타입)
  * @returns 생성된 Project 객체
  */
+
 export const createProjectInDB = async (
   projectData: Prisma.ProjectCreateInput
 ): Promise<Project> => {
   const newProject = await prisma.project.create({
     data: projectData,
+    include: {
+    owner: true, // 이걸 넣어야 toProjectDetailDto()에서 타입 충돌이 안 남
+  },
   });
   return newProject;
 };
