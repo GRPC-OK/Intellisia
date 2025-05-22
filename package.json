@@ -13,7 +13,7 @@
     "seed": "ts-node --project tsconfig.seed.json prisma/seed.ts"
   },
   "dependencies": {
-    "@prisma/client": "^6.8.0",
+    "@prisma/client": "^6.8.2",
     "date-fns": "^4.1.0",
     "next": "15.3.2",
     "next-auth": "^4.24.11",

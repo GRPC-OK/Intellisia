@@ -8,13 +8,13 @@ import { findProjectByDomainFromDB, createProjectInDB } from '@/services/db-acce
 // 여기에 인증 관련 함수/미들웨어를 import 하거나 직접 구현합니다.
 // 예시: import { getUserIdFromRequest } from '@/lib/auth';
 // 임시로 userId를 하드코딩하거나, 실제 인증 로직으로 대체해야 합니다.
-const getUserIdFromRequest = async (): Promise<number | null> => {
-  // 실제 인증 로직: 헤더의 토큰 검증, 세션 확인 등
-  // 예시: const session = await getSession({ req }); if (session?.user?.id) return session.user.id;
-  // 이 부분은 나중에 선우씨랑 논의해서 인증 로직 구현
-  console.warn("주의: 임시 사용자 ID (1) 사용 중. 실제 인증 로직으로 교체 필요!");
-  return 1; // MVP를 위해 임시로 사용자 ID 1을 반환
-};
+// const getUserIdFromRequest = async (): Promise<number | null> => {
+//   // 실제 인증 로직: 헤더의 토큰 검증, 세션 확인 등
+//   // 예시: const session = await getSession({ req }); if (session?.user?.id) return session.user.id;
+//   // 이 부분은 나중에 선우씨랑 논의해서 인증 로직 구현
+//   console.warn("주의: 임시 사용자 ID (1) 사용 중. 실제 인증 로직으로 교체 필요!");
+//   return 1; // MVP를 위해 임시로 사용자 ID 1을 반환
+// };
 
 
 // 요청 본문 유효성 검사를 위한 Zod 스키마 정의
@@ -38,7 +38,8 @@ export default async function handler(
   if (req.method === 'POST') {
     try {
       // 2. 인증 및 ownerId 확보
-      const ownerId = await getUserIdFromRequest(req);
+      // const ownerId = await getUserIdFromRequest(req);
+      const ownerId = 1;
       if (!ownerId) {
         return res.status(401).json({ message: '인증되지 않은 사용자입니다.' });
       }
