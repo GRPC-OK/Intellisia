@@ -1,3 +1,4 @@
+// project.service.ts
 import { getProjectById } from '@/repositories/project.repository';
 import { getVersionsByProject } from '@/repositories/version.repository';
 import { toProjectDetailDto } from '@/dtos/project/toProjectDetailDto';
