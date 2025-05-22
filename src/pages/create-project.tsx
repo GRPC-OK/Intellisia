@@ -1,4 +1,4 @@
-// src/pages/create-project.tsx
+// src/pages/create-project.tsx 수정
 
 import React, { useState, ChangeEvent, FormEvent, useEffect } from 'react';
 
