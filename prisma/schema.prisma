@@ -27,9 +27,9 @@ model Project {
   domain            String                @unique
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
-  ownerId           Int?
+  ownerId           Int
   defaultHelmValues Json?
-  owner             User?                  @relation("ProjectOwner", fields: [ownerId], references: [id])
+  owner             User                  @relation("ProjectOwner", fields: [ownerId], references: [id])
   contributors      ProjectContributors[]
   versions          Version[]
 }
