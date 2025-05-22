@@ -1,6 +1,6 @@
 // src/pages/api/projects/index.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import prisma from '@/lib/prisma'; // Prisma 클라이언트
+// import prisma from '@/lib/prisma'; Prisma 클라이언트 (나중에 사용용)
 import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { findProjectByDomainFromDB, createProjectInDB } from '@/services/db-access-service/project.db.service';
@@ -8,9 +8,10 @@ import { findProjectByDomainFromDB, createProjectInDB } from '@/services/db-acce
 // 여기에 인증 관련 함수/미들웨어를 import 하거나 직접 구현합니다.
 // 예시: import { getUserIdFromRequest } from '@/lib/auth';
 // 임시로 userId를 하드코딩하거나, 실제 인증 로직으로 대체해야 합니다.
-const getUserIdFromRequest = async (req: NextApiRequest): Promise<number | null> => {
+const getUserIdFromRequest = async (_req: NextApiRequest): Promise<number | null> => {
   // 실제 인증 로직: 헤더의 토큰 검증, 세션 확인 등
   // 예시: const session = await getSession({ req }); if (session?.user?.id) return session.user.id;
+  // 이 부분은 나중에 선우씨랑 논의해서 인증 로직 구현
   console.warn("주의: 임시 사용자 ID (1) 사용 중. 실제 인증 로직으로 교체 필요!");
   return 1; // MVP를 위해 임시로 사용자 ID 1을 반환
 };
@@ -74,7 +75,7 @@ export default async function handler(
         },
         // status: 'INITIALIZING', // 필요한 경우 주석 해제
       };
-      
+
       const newProject = await createProjectInDB(projectDataToSave);
 
       // 6. 응답 처리 (성공)
