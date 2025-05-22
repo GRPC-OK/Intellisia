@@ -62,7 +62,7 @@ export default async function handler(
       
       const fullDomain = `${validatedData.derivedDomain}.intellisia.app`; // 실제 저장될 전체 도메인
 
-      // 5. 데이터베이스 저장 로직 호출
+      // 5. 데이터베이스 저장 로직 호출.
       const projectDataToSave: Prisma.ProjectCreateInput = {
         name: validatedData.projectName,
         description: validatedData.description,
