@@ -165,7 +165,7 @@ const ProjectCreationForm: React.FC = () => {
       };
       console.log('서버로 전송할 데이터:', payload);
 
-      const response = await fetch('/api/projects', {
+      const response = await fetch('/api/projects/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
