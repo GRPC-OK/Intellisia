@@ -27,3 +27,17 @@ export const getVersionStatusById = async (versionId: number) => {
     },
   });
 };
+
+export const getVersionWithProject = async (versionId: number) => {
+  return prisma.version.findUnique({
+    where: { id: versionId },
+    include: {
+      author: true,
+      project: {
+        include: {
+          owner: true,
+        },
+      },
+    },
+  });
+};
