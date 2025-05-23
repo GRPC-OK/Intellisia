@@ -1,7 +1,7 @@
 import React, { useState, ChangeEvent, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/router';
 
-// 프로젝트 상세 정보 타입 (API 응답 예상)
+// 프로젝트 상세 정보 타입, (API 응답 예상)
 interface ProjectDetails {
   idFromDb: number;
   name: string;
