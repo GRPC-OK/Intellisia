@@ -1,14 +1,4 @@
-import { Version } from '@prisma/client';
-import { VersionHeader } from '@/types/version';
-
-type VersionWithProjectAndAuthor = Version & {
-  author: { name: string };
-  project: {
-    id: number;
-    name: string;
-    owner: { name: string };
-  };
-};
+import { VersionWithProjectAndAuthor, VersionHeader } from '@/types/version';
 
 export const toVersionHeaderDto = (
   version: VersionWithProjectAndAuthor
