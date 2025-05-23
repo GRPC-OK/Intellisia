@@ -3,8 +3,8 @@ import { useRouter } from 'next/router';
 
 // 프로젝트 상세 정보 타입 (API 응답 예상)
 interface ProjectDetails {
-  idFromDb: number; // DB의 실제 숫자 ID (내부적으로 필요할 수 있음)
-  name: string;     // URL에서 받은 프로젝트 이름/ID 또는 DB에서 조회한 실제 이름
+  idFromDb: number;
+  name: string;
   githubUrl: string;
   defaultHelmValues?: {
     replicaCount?: number;
@@ -39,9 +39,6 @@ interface FormErrors {
 
 const PrepareRunPage: React.FC = () => {
   const router = useRouter();
-  // 파일 경로가 pages/project/[projectId]/... 라면 router.query.projectId
-  // 파일 경로가 pages/project/[projectName]/... 라면 router.query.projectName
-  // 여기서는 두 경우 모두를 커버하기 위해 둘 다 확인 (실제로는 하나만 사용됨)
   const currentIdentifierFromQuery = (router.query.projectId || router.query.projectName) as string | undefined;
 
   const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
@@ -57,30 +54,24 @@ const PrepareRunPage: React.FC = () => {
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
-  const [isLoading, setIsLoading] = useState<boolean>(false); // 폼 제출 시 로딩
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
 
   useEffect(() => {
     if (!router.isReady) {
-      return; // 라우터가 준비될 때까지 대기
+      return;
     }
-
-    // 의존성 배열에 router.query 객체 전체 또는 특정 파라미터를 넣어주는 것이 좋음
-    // const currentIdentifier = (router.query.projectId || router.query.projectName) as string | undefined;
-    // 위에서 이미 currentIdentifierFromQuery로 선언했으므로 재사용
 
     if (currentIdentifierFromQuery) {
       setIsDataLoading(true);
       console.log(`(목업) 프로젝트 식별자 '${currentIdentifierFromQuery}'의 상세 정보 로드 시도...`);
 
-      // --- 목업 데이터 사용 (API 구현 전 UI 확인용) ---
       setTimeout(() => {
         let mockProjectFromApi: ProjectDetails | null = null;
-        // URL 식별자가 "testProject001" (또는 사용자 DB의 실제 프로젝트 이름/ID)일 때 목업 데이터 제공
-        if (currentIdentifierFromQuery === "testProject001") { // 또는 숫자 ID로 비교 (예: parseInt(currentIdentifierFromQuery) === 2)
+        if (currentIdentifierFromQuery === "testProject001") {
           mockProjectFromApi = {
-            idFromDb: 2, // 실제 DB ID
-            name: "testProject001", // URL에서 온 프로젝트 이름/ID
+            idFromDb: 2,
+            name: "testProject001",
             githubUrl: `https://github.com/GRPC-OK/Practice.git`,
             defaultHelmValues: {
               replicaCount: 1,
@@ -92,7 +83,6 @@ const PrepareRunPage: React.FC = () => {
             defaultDockerfilePath: './data/Dockerfile',
           };
         }
-        // 다른 프로젝트 식별자에 대한 목업 데이터 추가 가능
 
         if (mockProjectFromApi) {
           setProjectDetails(mockProjectFromApi);
@@ -112,14 +102,14 @@ const PrepareRunPage: React.FC = () => {
         }
         setIsDataLoading(false);
       }, 500);
-      // --- 목업 데이터 사용 끝 ---
     } else {
       setIsDataLoading(false);
       setProjectDetails(null);
       setErrors(prev => ({ ...prev, apiError: `프로젝트 식별자가 URL에 지정되지 않았습니다.` }));
       console.log("useEffect: 프로젝트 식별자가 URL 쿼리에서 발견되지 않음.");
     }
-  }, [router.isReady, router.query.projectId, router.query.projectName]); // 사용하는 모든 query 파라미터 명시
+    // Line 122 근처: currentIdentifierFromQuery를 의존성 배열에 추가
+  }, [router.isReady, currentIdentifierFromQuery]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -164,7 +154,6 @@ const PrepareRunPage: React.FC = () => {
                 cpu: formData.cpuRequest,
                 memory: formData.memoryRequest,
             },
-            // limits는 백엔드에서 플랫폼 정책에 따라 설정
         }
       },
     };
@@ -182,10 +171,12 @@ const PrepareRunPage: React.FC = () => {
   };
 
   if (isDataLoading) {
-    return <div className="min-h-screen bg-[#0d1117] text-gray-200 flex justify-center items-center"><p>프로젝트 '{currentIdentifierFromQuery || ''}' 정보를 불러오는 중...</p></div>;
+    // Line 185 근처: 따옴표 수정
+    return <div className="min-h-screen bg-[#0d1117] text-gray-200 flex justify-center items-center"><p>프로젝트 &apos;{currentIdentifierFromQuery || ''}&apos; 정보를 불러오는 중...</p></div>;
   }
   if (!projectDetails) {
-     return <div className="min-h-screen bg-[#0d1117] text-gray-200 flex justify-center items-center"><p className="text-red-400">{errors.apiError || `프로젝트 '${currentIdentifierFromQuery || ''}' 정보를 찾을 수 없습니다. URL을 확인하거나 목업 데이터를 확인하세요.`}</p></div>;
+     // Line 185 근처: 따옴표 수정
+     return <div className="min-h-screen bg-[#0d1117] text-gray-200 flex justify-center items-center"><p className="text-red-400">{errors.apiError || `프로젝트 &apos;${currentIdentifierFromQuery || ''}&apos; 정보를 찾을 수 없습니다. URL을 확인하거나 목업 데이터를 확인하세요.`}</p></div>;
   }
 
   return (
@@ -201,7 +192,6 @@ const PrepareRunPage: React.FC = () => {
         {successMessage && <div className="mb-6 p-4 bg-green-500 bg-opacity-10 border border-green-500 border-opacity-30 text-green-300 rounded-md text-sm">{successMessage}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* 브랜치 입력 */}
           <div>
             <label htmlFor="newBranchName" className="block text-sm font-medium text-gray-400 mb-1">브랜치 이름 (새로 생성 가능) <span className="text-red-400">*</span></label>
             <input type="text" name="newBranchName" id="newBranchName" value={formData.newBranchName} onChange={handleChange}
@@ -211,7 +201,6 @@ const PrepareRunPage: React.FC = () => {
             <p className="mt-1 text-xs text-gray-500">존재하지 않는 브랜치 입력 시, 프로젝트의 기본 브랜치에서 새로 생성합니다.</p>
           </div>
 
-          {/* 애플리케이션 이름 (읽기 전용 표시) */}
           <div>
             <label htmlFor="applicationNameDisplay" className="block text-sm font-medium text-gray-400 mb-1">애플리케이션 이름</label>
             <input type="text" name="applicationNameDisplay" id="applicationNameDisplay" value={projectDetails.name} readOnly
@@ -219,7 +208,6 @@ const PrepareRunPage: React.FC = () => {
             <p className="mt-1 text-xs text-gray-500">애플리케이션 이름은 프로젝트 이름과 동일하게 자동 설정됩니다.</p>
           </div>
 
-          {/* Dockerfile 경로 */}
           <div>
             <label htmlFor="dockerfilePath" className="block text-sm font-medium text-gray-400 mb-1">Dockerfile 경로 <span className="text-red-400">*</span></label>
             <input type="text" name="dockerfilePath" id="dockerfilePath" value={formData.dockerfilePath} onChange={handleChange}
@@ -240,47 +228,39 @@ const PrepareRunPage: React.FC = () => {
                   <li>Memory Request: {projectDetails.defaultHelmValues?.memoryRequest ?? 'N/A'}</li>
                 </ul>
               </div>
-
-              <p>
-                이 버전에서 다른 **요청(Request)** 값을 사용하려면 아래 필드에 입력하세요.
-              </p>
-
+              <p>이 버전에서 다른 <strong>요청(Request)</strong> 값을 사용하려면 아래 필드에 입력하세요.</p>
               <div>
                 <strong className="text-orange-300 block">플랫폼 정책에 따른 자동 제한(Limit) 설정 안내:</strong>
                 <ul className="list-disc list-inside pl-2 mt-1 text-gray-400 space-y-0.5">
                   <li>CPU 제한: 일반적으로 입력하신 CPU 요청 값의 <strong>약 1.5배 ~ 2배</strong> 범위 내에서 자동 설정됩니다.</li>
                   <li>메모리 제한: 일반적으로 입력하신 메모리 요청 값의 <strong>약 1.5배 ~ 2배</strong> 범위 내에서 자동 설정됩니다.</li>
                 </ul>
-                <p className="mt-1">
-                  정확한 제한 값은 백엔드에서 최종 결정됩니다.
-                </p>
+                <p className="mt-1">정확한 제한 값은 백엔드에서 최종 결정됩니다.</p>
               </div>
             </div>
 
-            {/* 레플리카 수 */}
             <div>
               <label htmlFor="helmReplicaCount" className="block text-sm font-medium text-gray-400 mb-1">레플리카 수 <span className="text-red-400">*</span></label>
               <input type="number" name="helmReplicaCount" id="helmReplicaCount" value={formData.helmReplicaCount} onChange={handleChange} min="0"
                 className={`w-full px-3 py-2 bg-[#010409] border ${errors.helmReplicaCount ? 'border-red-600' : 'border-[#30363d]'} rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-200`} />
               {errors.helmReplicaCount && <p className="mt-1 text-xs text-red-400">{errors.helmReplicaCount}</p>}
             </div>
-            {/* 애플리케이션 포트 */}
             <div>
               <label htmlFor="containerPort" className="block text-sm font-medium text-gray-400 mb-1">애플리케이션 포트 <span className="text-red-400">*</span></label>
               <input type="number" name="containerPort" id="containerPort" value={formData.containerPort} onChange={handleChange} min="1" max="65535"
                 className={`w-full px-3 py-2 bg-[#010409] border ${errors.containerPort ? 'border-red-600' : 'border-[#30363d]'} rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-200`} />
               {errors.containerPort && <p className="mt-1 text-xs text-red-400">{errors.containerPort}</p>}
             </div>
-            {/* CPU 요청 */}
             <div>
-              <label htmlFor="cpuRequest" className="block text-sm font-medium text-gray-400 mb-1">CPU 요청 (예: "100m", "0.5") <span className="text-red-400">*</span></label>
+              {/* Line 276 근처: 따옴표 수정 */}
+              <label htmlFor="cpuRequest" className="block text-sm font-medium text-gray-400 mb-1">CPU 요청 (예: &quot;100m&quot;, &quot;0.5&quot;) <span className="text-red-400">*</span></label>
               <input type="text" name="cpuRequest" id="cpuRequest" value={formData.cpuRequest} onChange={handleChange}
                 className={`w-full px-3 py-2 bg-[#010409] border ${errors.cpuRequest ? 'border-red-600' : 'border-[#30363d]'} rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-200`} />
               {errors.cpuRequest && <p className="mt-1 text-xs text-red-400">{errors.cpuRequest}</p>}
             </div>
-            {/* 메모리 요청 */}
             <div>
-              <label htmlFor="memoryRequest" className="block text-sm font-medium text-gray-400 mb-1">메모리 요청 (예: "128Mi", "0.5Gi") <span className="text-red-400">*</span></label>
+              {/* Line 283 근처: 따옴표 수정 */}
+              <label htmlFor="memoryRequest" className="block text-sm font-medium text-gray-400 mb-1">메모리 요청 (예: &quot;128Mi&quot;, &quot;0.5Gi&quot;) <span className="text-red-400">*</span></label>
               <input type="text" name="memoryRequest" id="memoryRequest" value={formData.memoryRequest} onChange={handleChange}
                 className={`w-full px-3 py-2 bg-[#010409] border ${errors.memoryRequest ? 'border-red-600' : 'border-[#30363d]'} rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-200`} />
               {errors.memoryRequest && <p className="mt-1 text-xs text-red-400">{errors.memoryRequest}</p>}
@@ -303,4 +283,4 @@ const PrepareRunPage: React.FC = () => {
   );
 };
 
-export default PrepareRunPage;  
+export default PrepareRunPage;
