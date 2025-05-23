@@ -24,7 +24,7 @@ export default NextAuth({
   // ✅ JWT 기반 세션 전략 설정
   session: {
     strategy: 'jwt',
-    maxAge: 60 * 30, // 세션 유지 기간: 30분 (초 단위)
+    maxAge: 60 * 60 * 24 * 7, // 세션 유지 기간: 일주일 (초 단위)
   },
 
   callbacks: {
