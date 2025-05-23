@@ -1,0 +1,149 @@
+name: Image Security Analysis with Trivy
+
+on:
+  workflow_dispatch:
+    inputs:
+      versionId:
+        description: 'The ID of the version being analyzed'
+        required: true
+      imageUri:
+        description: 'The full URI of the ECR image to scan (e.g., 123456789012.dkr.ecr.region.amazonaws.com/my-repo:tag)'
+        required: true
+      callbackUrl:
+        description: 'The URL to send the analysis result to'
+        required: true
+      # repo: # Not strictly needed for image scanning itself, but keeping for consistency if other steps need it
+      #   description: 'Repository name (e.g., owner/repo)'
+      #   required: false
+      # ref: # Not strictly needed for image scanning itself
+      #   description: 'Git ref (branch, tag, or SHA)'
+      #   required: false
+
+env:
+  AWS_REGION: "ap-northeast-2" # FIXME: 사용자 환경에 맞게 AWS 리전 수정 필요
+  S3_BUCKET_NAME: "my-siren-platform-s3" # FIXME: 사용자 환경에 맞게 S3 버킷 이름 수정 필요
+  # GH_TOKEN: ${{ secrets.PLATFORM_GITHUB_TOKEN }} # Not used in this workflow directly but good for reference
+
+jobs:
+  image-security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # Required for OIDC AWS authentication
+      contents: read  # Required to checkout the repository (if needed for other steps, not strictly for Trivy scan of existing image)
+
+    steps:
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/GitHubActions-ECR-S3-AccessRole # FIXME: 사용자 환경에 맞는 IAM 역할 ARN으로 수정 필요
+          aws-region: ${{ env.AWS_REGION }}
+      # - name: Configure AWS Credentials (Secrets - Alternative to OIDC)
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install Trivy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
+
+      - name: Scan ECR image with Trivy
+        id: trivy_scan
+        run: |
+          set -o pipefail # pipefail을 설정하여 파이프라인 중간의 실패도 감지
+          IMAGE_TO_SCAN="${{ github.event.inputs.imageUri }}"
+          TRIVY_OUTPUT_FILE="results.sarif"
+          
+          echo "Scanning image: $IMAGE_TO_SCAN"
+          
+          # Trivy로 이미지 스캔, SARIF 형식으로 결과 저장. 
+          # --exit-code 0: 취약점이 발견되어도 성공으로 처리 (결과 업로드 및 콜백은 항상 수행)
+          # --severity HIGH,CRITICAL: 특정 심각도 이상의 취약점만 스캔하려면 추가 (예시)
+          # --ignore-unfixed: 수정되지 않은 취약점은 무시하려면 추가 (예시)
+          if trivy image --format sarif --output "$TRIVY_OUTPUT_FILE" --exit-code 0 "$IMAGE_TO_SCAN"; then
+            echo "Trivy scan completed successfully (vulnerabilities may exist)."
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            # Trivy 자체 실행 오류 또는 --exit-code가 0이 아닌 경우 (예: --exit-code 1 설정 시 취약점 발견 시 실패)
+            echo "Trivy scan command failed or found vulnerabilities (if exit-code is non-zero)."
+            # 이 경우에도 결과 파일은 생성될 수 있으므로 업로드는 시도합니다.
+            # 백엔드에서 status와 s3Url을 모두 활용하여 최종 판단을 내릴 수 있습니다.
+            # 여기서는 Trivy 실행 자체의 성공/실패를 우선으로 status를 정합니다.
+            # 스캔 결과 내용에 따른 성공/실패는 백엔드에서 s3Url의 파일을 분석하여 결정할 수 있습니다.
+            # 또는 trivy의 exit code를 다르게 설정하여 여기서 직접 실패 처리할 수도 있습니다.
+            # 현재는 --exit-code 0이므로 trivy 명령어 자체가 성공하면 여기는 항상 success로 간주됩니다.
+            # 만약 trivy 실행 자체가 실패하면(예: 이미지 못찾음) 이 블록으로 올 수 있습니다.
+            TRIVY_EXIT_CODE=$?
+            echo "Trivy process exited with code: $TRIVY_EXIT_CODE"
+            # 실제 Trivy 실행 실패 시 status=fail로 설정
+            if [ $TRIVY_EXIT_CODE -ne 0 ]; then
+                 echo "status=fail" >> $GITHUB_OUTPUT
+            else
+                 # --exit-code 0으로 인해 취약점이 있어도 이쪽으로 오지 않음.
+                 # 만약 --exit-code 1 이고 취약점 발견시 이쪽으로 오면 success로 처리 (결과 파일은 있으므로)
+                 echo "status=success" >> $GITHUB_OUTPUT # Trivy found issues, but command itself was successful
+            fi
+          fi
+          
+          # 생성된 결과 파일이 비어있는지 확인 (Trivy가 이미지를 못찾거나 분석 못했을 경우)
+          if [ ! -s "$TRIVY_OUTPUT_FILE" ]; then
+            echo "Trivy output file is empty or does not exist. Marking as fail."
+            # 덮어쓰기로 최종 실패 처리
+            echo "status=fail" >> $GITHUB_OUTPUT 
+            # 빈 파일이라도 업로드할 수 있도록 S3_UPLOAD_STATUS는 success로 둘 수 있으나,
+            # 의미있는 결과가 아니므로 업로드 안하거나, 실패로 명확히 하는게 나음.
+            # 여기서는 빈 파일 업로드를 막고 status=fail로 명시.
+          fi
+
+      - name: Upload Trivy scan results to S3
+        id: s3_upload
+        if: steps.trivy_scan.outputs.status != 'fail' && steps.trivy_scan.outputs.status != '' # Trivy 스캔이 실패하지 않았을 경우에만 업로드
+        run: |
+          S3_KEY="image-analysis-results/${{ github.event.inputs.versionId }}/results.sarif"
+          if aws s3 cp results.sarif s3://${{ env.S3_BUCKET_NAME }}/"$S3_KEY"; then
+            echo "Successfully uploaded results.sarif to s3://${{ env.S3_BUCKET_NAME }}/$S3_KEY"
+            echo "s3_url=s3://${{ env.S3_BUCKET_NAME }}/$S3_KEY" >> $GITHUB_OUTPUT
+            echo "upload_status=success" >> $GITHUB_OUTPUT
+          else
+            echo "Failed to upload results.sarif to S3."
+            echo "upload_status=fail" >> $GITHUB_OUTPUT
+          fi
+        # always() # 스캔 실패시에도 S3 업로드 시도 여부 (현재는 스캔 성공시에만 업로드)
+
+      - name: Send result to backend
+        # always() # 항상 콜백을 보낼지 여부 (현재는 이전 단계들의 성공 여부에 따라 결정됨)
+        run: |
+          OVERALL_STATUS="fail" # 기본값을 실패로 설정
+          S3_RESULT_URL=""
+          
+          TRIVY_STATUS="${{ steps.trivy_scan.outputs.status }}"
+          S3_UPLOAD_STATUS="${{ steps.s3_upload.outputs.upload_status }}"
+          
+          echo "Trivy Scan Status: $TRIVY_STATUS"
+          echo "S3 Upload Status: $S3_UPLOAD_STATUS"
+
+          # Trivy 스캔이 성공하고 S3 업로드도 성공해야 최종 성공
+          if [ "$TRIVY_STATUS" = "success" ] && [ "$S3_UPLOAD_STATUS" = "success" ]; then
+            OVERALL_STATUS="success"
+            S3_RESULT_URL="${{ steps.s3_upload.outputs.s3_url }}"
+          elif [ "$TRIVY_STATUS" = "success" ] && [ "$S3_UPLOAD_STATUS" = "fail" ]; then
+            # Trivy 스캔은 성공했으나 S3 업로드 실패
+            OVERALL_STATUS="fail"
+            S3_RESULT_URL="" # S3 URL 없으므로 빈 값
+          else
+            # Trivy 스캔 자체가 실패한 경우
+            OVERALL_STATUS="fail"
+            S3_RESULT_URL=""
+          fi
+          
+          echo "Overall Status: $OVERALL_STATUS"
+          echo "S3 URL: $S3_RESULT_URL"
+
+          # URL 인코딩이 필요할 수 있는 값들에 대해서는 추후 보완 (예: jq 사용)
+          curl -X POST -H "Content-Type: application/json"             -d "{"versionId": "${{ github.event.inputs.versionId }}", "status": "$OVERALL_STATUS", "s3Url": "$S3_RESULT_URL"}"             "${{ github.event.inputs.callbackUrl }}"
