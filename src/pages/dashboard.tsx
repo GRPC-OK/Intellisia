@@ -18,7 +18,7 @@ export default function Dashboard() {
   };
 
   // 프로젝트 목록 상태 관리 (초기값 빈 배열)
-  const [projects, setProjects] = useState<ProjectData[]>([]);
+  const [project, setProjects] = useState<ProjectData[]>([]);
   // 데이터 로딩 상태 관리
   const [isLoading, setIsLoading] = useState<boolean>(true);
   // 오류 상태 관리
@@ -32,7 +32,7 @@ export default function Dashboard() {
 
       try {
         // TODO: 백엔드 API 라우트 URL로 변경
-        const response = await fetch('/api/projects/dashboard_projects', {
+        const response = await fetch('/api/project/dashboard_projects', {
           // 백엔드 API 호출
           method: 'GET',
           headers: {
@@ -89,7 +89,7 @@ export default function Dashboard() {
   }
 
   // 프로젝트 목록 데이터가 비어 있을 경우 메시지 표시
-  //if (projects.length === 0) {
+  //if (project.length === 0) {
   // 로딩도 끝났고 오류도 없는데 목록이 비어 있다면 DB에 데이터가 없는 것일 수 있습니다.
   // return <div>프로젝트가 없습니다.</div>;
   //}
@@ -99,12 +99,12 @@ export default function Dashboard() {
     <div className={styles.container}>
       {/* 전체 프로젝트 목록 조회 UI */}
       <main className={styles.main}>
-        <h1 className={styles.title}>Current Projects</h1>
+        <h1 className={styles.title}>Current Project</h1>
         <div className={styles.projectList}>
           {/* ------------------------------------ */}
-          {/* DB에서 받아온 projects 상태를 사용하여 목록 렌더링 */}
+          {/* DB에서 받아온 project 상태를 사용하여 목록 렌더링 */}
           {/* key는 이제 project.id를 사용하는 것이 더 안전하고 고유합니다. */}
-          {projects.map((project) => (
+          {project.map((project) => (
             <div
               key={project.id} // project.name 대신 project.id 사용 권장
               className={styles.projectCard}
