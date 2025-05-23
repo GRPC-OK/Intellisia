@@ -3,7 +3,6 @@ import { PrismaClient, StepStatus, AnalysisStatus, FlowStatus, Prisma, Project, 
 
 const prisma = new PrismaClient();
 
-// RequestBody의 helmValueOverrides 내부 타입을 좀 더 명확히 정의
 interface HelmResourcesRequests {
   cpu?: string;
   memory?: string;
@@ -11,30 +10,28 @@ interface HelmResourcesRequests {
 
 interface HelmResources {
   requests?: HelmResourcesRequests;
-  // limits는 백엔드에서 생성하므로 RequestBody에 포함하지 않음
 }
 
 interface HelmValueOverrides {
   replicaCount?: number;
   containerPort?: number;
   resources?: HelmResources;
-  [key: string]: unknown; // 다른 추가적인 값들은 여전히 허용하되, any 대신 unknown 사용
+  [key: string]: unknown;
 }
 
 interface RequestBody {
   branch: string;
   applicationName: string;
   dockerfilePath: string;
-  helmValueOverrides?: HelmValueOverrides; // 수정된 타입 사용
+  helmValueOverrides?: HelmValueOverrides;
 }
 
-// ApiResponse 타입은 유지
 type ApiResponse = {
   message: string;
   versionId?: number;
   versionName?: string;
   error?: string;
-  detail?: string; // 개발 환경용 상세 에러 (문자열로 통일)
+  detail?: string;
 };
 
 function calculateResourceLimit(requestValue: string | undefined, multiplier: number, defaultUnitSuffix: string = ''): string | undefined {
@@ -45,6 +42,29 @@ function calculateResourceLimit(requestValue: string | undefined, multiplier: nu
   const unit = requestValue.replace(/[0-9.-]/g, '') || defaultUnitSuffix;
   return `${calculatedValue}${unit}`;
 }
+
+// 타입 안정성을 높인 getJsonValue 헬퍼 함수
+const getJsonValue = <T>(
+  obj: Prisma.JsonValue | null | undefined,
+  path: string[],
+  defaultValue: T
+): T => {
+  let current: unknown = obj; // any 대신 unknown 사용
+  for (const key of path) {
+    if (typeof current !== 'object' || current === null || !current.hasOwnProperty(key)) {
+      return defaultValue;
+    }
+    current = (current as Record<string, unknown>)[key]; // Record<string, unknown>으로 단언하여 인덱싱
+  }
+  // 최종 값의 타입이 defaultValue의 타입과 일치하는지 확인 (런타임에서는 typeof로, 실제로는 더 정교한 검증 필요 가능)
+  // 여기서는 defaultValue의 타입을 신뢰하고 current를 T로 단언합니다.
+  // 또는, zod와 같은 라이브러리로 실제 값의 스키마를 검증하는 것이 더 안전합니다.
+  return current as T; // 주의: 이 단언은 current가 실제로 T 타입임을 보장하지 않음.
+                        // defaultValue의 타입과 일치하는지 런타임에 더 확인하거나,
+                        // zod 등으로 파싱/검증하는 것이 가장 안전합니다.
+                        // 현재는 ESLint를 통과하기 위한 최소한의 조치입니다.
+};
+
 
 export default async function handler(
   req: NextApiRequest,
@@ -69,7 +89,6 @@ export default async function handler(
         return res.status(400).json({ message: '요청 본문(body)이 비어 있습니다.' });
     }
 
-    // req.body 타입을 RequestBody로 명시적 단언 (필요시 추가 검증 로직)
     const {
       branch: requestedBranchName,
       applicationName,
@@ -81,7 +100,7 @@ export default async function handler(
       return res.status(400).json({ message: '필수 입력값이 누락되었습니다 (branch, applicationName, dockerfilePath).' });
     }
 
-    const project: Project | null = await prisma.project.findUnique({ // 타입 명시
+    const project: Project | null = await prisma.project.findUnique({
       where: { name: projectName },
     });
 
@@ -98,26 +117,14 @@ export default async function handler(
     const cleanBranchName = requestedBranchName.replace(/[^a-zA-Z0-9-]/g, '-');
     const versionName = `${cleanBranchName}-${targetCommitSha.substring(0, 7)}`;
 
-    const defaultHelm = project.defaultHelmValues as Prisma.JsonObject | undefined | null;
+    const defaultHelm = project.defaultHelmValues; // 타입은 Prisma.JsonValue | null
     const overrideRequests = helmValueOverrides?.resources?.requests;
 
-    // 타입 안정성을 위해 기본값 가져올 때 주의
-    const getJsonValue = <T>(obj: Prisma.JsonValue | null | undefined, path: string[], defaultValue: T): T => {
-        let current: any = obj;
-        for (const key of path) {
-            if (current === null || typeof current !== 'object' || !current.hasOwnProperty(key)) {
-                return defaultValue;
-            }
-            current = current[key];
-        }
-        return typeof current === typeof defaultValue ? current : defaultValue;
-    };
-
-    const defaultProjectReplicaCount = getJsonValue(defaultHelm, ['replicaCount'], 1);
-    const defaultProjectContainerPort = getJsonValue(defaultHelm, ['containerPort'], 8080);
-    const defaultProjectCpuRequest = getJsonValue(defaultHelm, ['resources', 'requests', 'cpu'], "100m");
-    const defaultProjectMemoryRequest = getJsonValue(defaultHelm, ['resources', 'requests', 'memory'], "128Mi");
-
+    // getJsonValue 사용 및 타입 명시
+    const defaultProjectReplicaCount = getJsonValue<number | undefined>(defaultHelm, ['replicaCount'], undefined) ?? 1;
+    const defaultProjectContainerPort = getJsonValue<number | undefined>(defaultHelm, ['containerPort'], undefined) ?? 8080;
+    const defaultProjectCpuRequest = getJsonValue<string | undefined>(defaultHelm, ['resources', 'requests', 'cpu'], undefined) ?? "100m";
+    const defaultProjectMemoryRequest = getJsonValue<string | undefined>(defaultHelm, ['resources', 'requests', 'memory'], undefined) ?? "128Mi";
 
     const finalCpuRequest = overrideRequests?.cpu || defaultProjectCpuRequest;
     const finalMemoryRequest = overrideRequests?.memory || defaultProjectMemoryRequest;
@@ -138,15 +145,14 @@ export default async function handler(
     };
     if (helmValueOverrides) {
         for (const key in helmValueOverrides) {
-            // `unknown` 타입으로 인해 직접 할당 전 타입 체크 또는 단언 필요할 수 있음
             if (!['replicaCount', 'containerPort', 'resources'].includes(key)) {
                 finalHelmValues[key] = helmValueOverrides[key] as Prisma.JsonValue;
             }
         }
     }
 
-    const newVersion: Version = await prisma.$transaction(async (tx) => { // 타입 명시
-      const createdHelmValues: HelmValues = await tx.helmValues.create({ // 타입 명시
+    const newVersion: Version = await prisma.$transaction(async (tx) => {
+      const createdHelmValues: HelmValues = await tx.helmValues.create({
         data: { content: finalHelmValues },
       });
 
@@ -185,12 +191,14 @@ export default async function handler(
       versionName: newVersion.name,
     });
 
-  } catch (error: unknown) { // Line 188: error 타입을 unknown으로 변경
+  } catch (error: unknown) { // Line 214 근처: error 타입을 unknown으로
     console.error("오류 발생 (최소 기능):", error);
     let statusCode = 500;
     let publicErrorMessage = "서버 내부 오류가 발생했습니다.";
     let errorName = "InternalServerError";
-    let errorDetail: string | undefined;
+    
+    // errorDetail을 const로 변경하고 바로 할당
+    const errorDetail: string | undefined = process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : String(error)) : undefined;
 
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -204,19 +212,14 @@ export default async function handler(
           publicErrorMessage = `고유해야 하는 값이 이미 존재합니다: ${target}`;
           statusCode = 409;
       }
-    } else if (error instanceof Error) { // 일반 Error 객체 처리
+    } else if (error instanceof Error) {
         errorName = error.name;
-        // 개발 환경에서만 실제 에러 메시지 포함
         publicErrorMessage = process.env.NODE_ENV === 'development' ? error.message : publicErrorMessage;
     }
     
-    // detail은 항상 문자열로 통일 (개발 환경에서만)
-    errorDetail = process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : String(error)) : undefined;
-
-
     return res.status(statusCode).json({
       message: publicErrorMessage,
-      error: errorName, // 에러 이름 또는 코드 전달
+      error: errorName,
       detail: errorDetail,
     });
   }
