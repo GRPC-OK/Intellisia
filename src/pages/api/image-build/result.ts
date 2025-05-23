@@ -35,11 +35,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
 
         return res.status(200).json({ message: 'Build status updated successfully' })
-    } catch (err: any) {
-        if (err.code === 'P2025') {
-            return res.status(404).json({ error: 'Version not found' })
-        }
-        console.error('[result.ts] DB update error:', err)
-        return res.status(500).json({ error: 'Failed to update build status' })
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Failed to update build status'
+        console.error('[result.ts] DB update error:', message)
+        return res.status(500).json({ error: message })
     }
 }

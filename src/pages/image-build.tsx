@@ -11,7 +11,6 @@ type BuildInfo = {
 export default function ImageBuild() {
   const router = useRouter();
   const [buildInfo, setBuildInfo] = useState<BuildInfo | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchBuildStatus = async () => {
@@ -20,8 +19,8 @@ export default function ImageBuild() {
         if (!res.ok) throw new Error('Failed to fetch build status')
         const data = await res.json()
         setBuildInfo(data)
-      } catch (err: any) {
-        setError(err.message || 'Unknown error')
+      } catch (err: unknown) {
+        console.error('[ImageBuild] fetch error:', err)
       }
     }
 
