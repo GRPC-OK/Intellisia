@@ -16,7 +16,7 @@ interface RequestBody {
         memory?: string;
       };
     };
-    [key: string]: any;
+    [key: string]: string | number | boolean | { [key: string]: string | number | boolean };
   };
 }
 
