@@ -21,7 +21,7 @@ export default async function handler(
   }
 
   try {
-    const projects = await prisma.project.findMany({
+    const project = await prisma.project.findMany({
       select: {
         id: true,
         name: true,
@@ -31,7 +31,7 @@ export default async function handler(
       },
     });
 
-    return res.status(200).json(projects);
+    return res.status(200).json(project);
   } catch (error) {
     console.error('Detailed error:', error);
     return res.status(500).json({

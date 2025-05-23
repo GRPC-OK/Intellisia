@@ -5,12 +5,12 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const projectId = Number(req.query.projectId);
+  const projectName = Number(req.query.projectName);
   const sortQuery = req.query.sort === 'oldest' ? 'asc' : 'desc';
 
   if (req.method === 'GET') {
     try {
-      const project = await getProjectDetail(projectId, sortQuery);
+      const project = await getProjectDetail(projectName, sortQuery);
       if (!project) return res.status(404).json({ message: 'Not Found' });
 
       return res.status(200).json(project);

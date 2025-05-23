@@ -12,7 +12,7 @@ import SortControl from '@/components/project-detail/SortControl';
 
 export default function ProjectDetailPage() {
   const router = useRouter();
-  const { projectId } = router.query;
+  const { projectName } = router.query;
 
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [versions, setVersions] = useState<VersionSummary[]>([]);
@@ -20,11 +20,11 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (typeof projectId !== 'string') return;
+    if (typeof projectName !== 'string') return;
 
     const fetchProject = async () => {
       setLoading(true);
-      const res = await fetch(`/api/projects/${projectId}?sort=${sort}`);
+      const res = await fetch(`/api/project/${projectName}?sort=${sort}`);
       const data = await res.json();
       setProject(data);
       setVersions(data.versions);
@@ -32,7 +32,7 @@ export default function ProjectDetailPage() {
     };
 
     fetchProject();
-  }, [projectId, sort]);
+  }, [projectName, sort]);
 
   const handleVersionClick = (version: VersionSummary) => {
     router.push(`/version/${version.name}`);

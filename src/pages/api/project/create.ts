@@ -1,4 +1,4 @@
-// src/pages/api/projects/index.ts
+// src/pages/api/project/index.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 // import prisma from '@/lib/prisma'; Prisma 클라이언트 (나중에 사용용)
 import { Prisma } from '@prisma/client';

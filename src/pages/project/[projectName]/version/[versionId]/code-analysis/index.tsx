@@ -24,7 +24,7 @@ export default function CodeAnalysisPage() {
     if (!projectId || !versionId) return;
 
     const redirectToProject = () => {
-      router.replace(`/projects/${projectId}`);
+      router.replace(`/project/${projectId}`);
     };
 
     const fetchData = async () => {
@@ -69,7 +69,7 @@ export default function CodeAnalysisPage() {
 
   const handleIssueClick = (issue: CodeIssue) => {
     router.push(
-      `/projects/${projectId}/versions/${versionId}/code-analysis/${issue.id}`
+      `/project/${projectId}/versions/${versionId}/code-analysis/${issue.id}`
     );
   };
 
