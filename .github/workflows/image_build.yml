@@ -1,0 +1,72 @@
+name: Run Image Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      versionName:
+        required: true
+      projectId:
+        required: true
+      callbackUrl:
+        required: true
+      repo:
+        required: true
+      ref:
+        required: true
+
+jobs:
+  image-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 레포지토리 클론
+      - name: Clone target repository
+        env:
+          GH_TOKEN: ${{ secrets.PLATFORM_GITHUB_TOKEN }}
+        run: |
+          # 입력받은 ref(branch/tag)로 타겟 레포지토리를 클론
+            git clone --branch ${{ github.event.inputs.ref }} \
+            https://$GH_TOKEN@github.com/${{ github.event.inputs.repo }} target-repo
+      # 2. Docker Buildx 셋업
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3 # 멀티플랫폼 빌드를 위한 Buildx 환경 구성
+
+      # 2-1. AWS 로그인
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # 3. 이미지 빌드 및 ECR 푸시
+      - name: Build and Push Docker image to ECR
+        id: build-push
+        run: |
+          cd target-repo
+          IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${{ github.event.inputs.repo }}:${{ github.event.inputs.versionName }}"
+          # Docker 이미지 빌드
+          if docker build -t "$IMAGE_URI" .; then
+            # ECR에 푸시
+            if docker push "$IMAGE_URI"; then
+              echo "status=success" >> $GITHUB_OUTPUT
+            else
+              echo "status=fail" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "status=fail" >> $GITHUB_OUTPUT
+          fi
+
+      # 4. 빌드 결과를 백엔드로 전송
+      - name: Upload result to backend
+        run: |
+          # 빌드 성공/실패 결과를 callbackUrl로 POST 요청하여 알림
+          if [ "${{ steps.build-push.outputs.status }}" = "success" ]; then
+            curl -X POST "${{ github.event.inputs.callbackUrl }}?versionName=${{ github.event.inputs.versionName }}&projectId=${{ github.event.inputs.projectId }}&status=success"
+          else
+            curl -X POST "${{ github.event.inputs.callbackUrl }}?versionName=${{ github.event.inputs.versionName }}&projectId=${{ github.event.inputs.projectId }}&status=fail"
+          fi

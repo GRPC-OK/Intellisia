@@ -1,0 +1,164 @@
+.githubBg {
+  min-height: 100vh;
+  background: #161b22;
+  color: #fff;
+}
+
+.githubHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  height: 64px;
+}
+
+.githubLogo {
+  width: 32px;
+  height: 32px;
+  background: url('/github-mark-white.svg') no-repeat center/contain;
+}
+
+.githubHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.githubNav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.githubNav a {
+  color: #c9d1d9;
+  text-decoration: none;
+  font-size: 15px;
+}
+
+.githubNav a:hover {
+  color: #58a6ff;
+}
+
+.githubHeaderActions {
+  display: flex;
+  align-items: center;
+  margin-left: 16px;
+  gap: 4px;
+}
+
+.githubNewBtnBlue {
+  background: #2386f2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 16px;
+  margin-right: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.githubNewBtnBlue:hover {
+  background: #1c6ed2;
+}
+
+.githubIconBtn {
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-right: 4px;
+  transition: background 0.15s;
+}
+
+.githubIconBtn:hover {
+  background: #21262d;
+}
+
+.mainContainerFlex {
+  max-width: 1600px;
+  min-height: 750px;
+  margin: 64px auto 0 auto;
+  background: #0d1117;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.3);
+  padding: 56px 120px 64px 120px;
+  display: flex;
+  flex-direction: row;
+  gap: 64px;
+}
+
+.mainContentLeft {
+  flex: 2;
+  min-width: 0;
+}
+
+.mainTitle {
+  font-size: 2.2rem;
+  font-weight: bold;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.buildCard {
+  background: #181c20;
+  border-radius: 12px;
+  padding: 32px 28px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  font-size: 1.08rem;
+}
+
+.buildSuccess {
+  color: #238636;
+  font-weight: bold;
+}
+
+.buildFail {
+  color: #f85149;
+  font-weight: bold;
+}
+
+
+.buildLogTitle {
+  margin-top: 18px;
+  margin-bottom: 6px;
+}
+
+.buildLog {
+  background: #23272e;
+  color: #b3bfc9;
+  border-radius: 8px;
+  padding: 14px;
+  font-size: 0.98rem;
+  overflow-x: auto;
+}
+
+.nextBtnContainer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.nextBtn {
+  margin-top: 12px;
+  background: #2386f2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 32px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.nextBtn:hover {
+  background: #1c6ed2;
+}
