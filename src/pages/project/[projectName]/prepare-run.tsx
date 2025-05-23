@@ -36,7 +36,7 @@ const PrepareRunPage: React.FC = () => {
   // projectDetails 상태는 이제 필수적으로 로드하지 않음
   // const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
   // isDataLoading은 더 이상 details API 로딩을 위한 것이 아님 (초기값 false)
-  const [isDataLoading, setIsDataLoading] = useState<boolean>(false);
+
 
   const [formData, setFormData] = useState<FormData>({
     newBranchName: 'main', // 기본적인 일반 기본값
@@ -60,9 +60,9 @@ const PrepareRunPage: React.FC = () => {
         ...prev,
         applicationName: projectNameFromUrl,
       }));
-      setIsDataLoading(false); // details API를 기다리지 않으므로 로딩 즉시 종료
+
     } else if (router.isReady && !projectNameFromUrl) {
-      setIsDataLoading(false);
+
       setErrors(prev => ({ ...prev, apiError: `프로젝트 이름이 URL에 지정되지 않았습니다.` }));
     }
   }, [router.isReady, projectNameFromUrl]);
