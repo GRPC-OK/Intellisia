@@ -1,31 +1,40 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { PrismaClient, StepStatus, AnalysisStatus, FlowStatus, Prisma } from '@prisma/client';
+import { PrismaClient, StepStatus, AnalysisStatus, FlowStatus, Prisma, Project, Version, HelmValues } from '@prisma/client'; // 구체적인 타입 임포트
 
 const prisma = new PrismaClient();
+
+// RequestBody의 helmValueOverrides 내부 타입을 좀 더 명확히 정의
+interface HelmResourcesRequests {
+  cpu?: string;
+  memory?: string;
+}
+
+interface HelmResources {
+  requests?: HelmResourcesRequests;
+  // limits는 백엔드에서 생성하므로 RequestBody에 포함하지 않음
+}
+
+interface HelmValueOverrides {
+  replicaCount?: number;
+  containerPort?: number;
+  resources?: HelmResources;
+  [key: string]: unknown; // 다른 추가적인 값들은 여전히 허용하되, any 대신 unknown 사용
+}
 
 interface RequestBody {
   branch: string;
   applicationName: string;
   dockerfilePath: string;
-  helmValueOverrides?: {
-    replicaCount?: number;
-    containerPort?: number;
-    resources?: {
-      requests?: {
-        cpu?: string;
-        memory?: string;
-      };
-    };
-    [key: string]: any;
-  };
+  helmValueOverrides?: HelmValueOverrides; // 수정된 타입 사용
 }
 
+// ApiResponse 타입은 유지
 type ApiResponse = {
   message: string;
   versionId?: number;
   versionName?: string;
   error?: string;
-  detail?: any;
+  detail?: string; // 개발 환경용 상세 에러 (문자열로 통일)
 };
 
 function calculateResourceLimit(requestValue: string | undefined, multiplier: number, defaultUnitSuffix: string = ''): string | undefined {
@@ -41,10 +50,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>
 ) {
-  // --- ▼▼▼ 요청 본문 로깅 추가 ▼▼▼ ---
   console.log('Request received. Method:', req.method, 'Query:', req.query);
   console.log('Request body:', req.body);
-  // --- ▲▲▲ 요청 본문 로깅 추가 ▲▲▲ ---
 
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
@@ -58,25 +65,23 @@ export default async function handler(
       return res.status(400).json({ message: 'URL 경로에 Project 이름이 필요합니다.' });
     }
 
-    // 요청 본문이 없거나 비어있는 경우에 대한 방어 코드 추가
     if (!req.body || Object.keys(req.body).length === 0) {
         return res.status(400).json({ message: '요청 본문(body)이 비어 있습니다.' });
     }
 
+    // req.body 타입을 RequestBody로 명시적 단언 (필요시 추가 검증 로직)
     const {
       branch: requestedBranchName,
       applicationName,
       dockerfilePath,
       helmValueOverrides,
-    }: RequestBody = req.body;
+    }: RequestBody = req.body as RequestBody;
 
     if (!requestedBranchName || !applicationName || !dockerfilePath) {
       return res.status(400).json({ message: '필수 입력값이 누락되었습니다 (branch, applicationName, dockerfilePath).' });
     }
 
-    // 1. Project 조회
-    // !!! 중요: Project 모델의 'name' 필드에 @unique 제약조건을 추가하고 마이그레이션해야 합니다. !!!
-    const project = await prisma.project.findUnique({
+    const project: Project | null = await prisma.project.findUnique({ // 타입 명시
       where: { name: projectName },
     });
 
@@ -96,29 +101,23 @@ export default async function handler(
     const defaultHelm = project.defaultHelmValues as Prisma.JsonObject | undefined | null;
     const overrideRequests = helmValueOverrides?.resources?.requests;
 
-    let defaultProjectReplicaCount = 1;
-    if (defaultHelm && typeof defaultHelm['replicaCount'] === 'number') {
-        defaultProjectReplicaCount = defaultHelm['replicaCount'] as number;
-    }
+    // 타입 안정성을 위해 기본값 가져올 때 주의
+    const getJsonValue = <T>(obj: Prisma.JsonValue | null | undefined, path: string[], defaultValue: T): T => {
+        let current: any = obj;
+        for (const key of path) {
+            if (current === null || typeof current !== 'object' || !current.hasOwnProperty(key)) {
+                return defaultValue;
+            }
+            current = current[key];
+        }
+        return typeof current === typeof defaultValue ? current : defaultValue;
+    };
 
-    let defaultProjectContainerPort = 8080;
-    if (defaultHelm && typeof defaultHelm['containerPort'] === 'number') {
-        defaultProjectContainerPort = defaultHelm['containerPort'] as number;
-    }
+    const defaultProjectReplicaCount = getJsonValue(defaultHelm, ['replicaCount'], 1);
+    const defaultProjectContainerPort = getJsonValue(defaultHelm, ['containerPort'], 8080);
+    const defaultProjectCpuRequest = getJsonValue(defaultHelm, ['resources', 'requests', 'cpu'], "100m");
+    const defaultProjectMemoryRequest = getJsonValue(defaultHelm, ['resources', 'requests', 'memory'], "128Mi");
 
-    let defaultProjectCpuRequest = "100m";
-    if (defaultHelm && typeof defaultHelm['resources'] === 'object' && defaultHelm['resources'] &&
-        typeof (defaultHelm['resources'] as Prisma.JsonObject)['requests'] === 'object' && (defaultHelm['resources'] as Prisma.JsonObject)['requests'] &&
-        typeof ((defaultHelm['resources'] as Prisma.JsonObject)['requests'] as Prisma.JsonObject)['cpu'] === 'string') {
-        defaultProjectCpuRequest = ((defaultHelm['resources'] as Prisma.JsonObject)['requests'] as Prisma.JsonObject)['cpu'] as string;
-    }
-
-    let defaultProjectMemoryRequest = "128Mi";
-    if (defaultHelm && typeof defaultHelm['resources'] === 'object' && defaultHelm['resources'] &&
-        typeof (defaultHelm['resources'] as Prisma.JsonObject)['requests'] === 'object' && (defaultHelm['resources'] as Prisma.JsonObject)['requests'] &&
-        typeof ((defaultHelm['resources'] as Prisma.JsonObject)['requests'] as Prisma.JsonObject)['memory'] === 'string') {
-        defaultProjectMemoryRequest = ((defaultHelm['resources'] as Prisma.JsonObject)['requests'] as Prisma.JsonObject)['memory'] as string;
-    }
 
     const finalCpuRequest = overrideRequests?.cpu || defaultProjectCpuRequest;
     const finalMemoryRequest = overrideRequests?.memory || defaultProjectMemoryRequest;
@@ -139,14 +138,15 @@ export default async function handler(
     };
     if (helmValueOverrides) {
         for (const key in helmValueOverrides) {
+            // `unknown` 타입으로 인해 직접 할당 전 타입 체크 또는 단언 필요할 수 있음
             if (!['replicaCount', 'containerPort', 'resources'].includes(key)) {
-                finalHelmValues[key] = helmValueOverrides[key];
+                finalHelmValues[key] = helmValueOverrides[key] as Prisma.JsonValue;
             }
         }
     }
 
-    const newVersion = await prisma.$transaction(async (tx) => {
-      const createdHelmValues = await tx.helmValues.create({
+    const newVersion: Version = await prisma.$transaction(async (tx) => { // 타입 명시
+      const createdHelmValues: HelmValues = await tx.helmValues.create({ // 타입 명시
         data: { content: finalHelmValues },
       });
 
@@ -185,25 +185,39 @@ export default async function handler(
       versionName: newVersion.name,
     });
 
-  } catch (error: any) {
-    console.error("오류 발생 (최소 기능):", error); // 여기에 상세 에러가 찍힙니다.
+  } catch (error: unknown) { // Line 188: error 타입을 unknown으로 변경
+    console.error("오류 발생 (최소 기능):", error);
     let statusCode = 500;
     let publicErrorMessage = "서버 내부 오류가 발생했습니다.";
+    let errorName = "InternalServerError";
+    let errorDetail: string | undefined;
+
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       publicErrorMessage = "데이터베이스 처리 중 오류가 발생했습니다.";
+      errorName = `PrismaError_${error.code}`;
       if (error.code === 'P2025') {
-          publicErrorMessage = `요청하신 프로젝트 '${projectName}'를 찾을 수 없습니다.`; // 에러 메시지에 projectName 추가
+          publicErrorMessage = `요청하신 프로젝트 '${projectName}'를 찾을 수 없습니다.`;
           statusCode = 404;
       } else if (error.code === 'P2002') {
-          publicErrorMessage = `고유해야 하는 값이 이미 존재합니다: ${Array.isArray(error.meta?.target) ? error.meta.target.join(', ') : error.meta?.target || '확인 필요'}`;
+          const target = Array.isArray(error.meta?.target) ? error.meta.target.join(', ') : error.meta?.target as string || '알 수 없는 필드';
+          publicErrorMessage = `고유해야 하는 값이 이미 존재합니다: ${target}`;
           statusCode = 409;
       }
+    } else if (error instanceof Error) { // 일반 Error 객체 처리
+        errorName = error.name;
+        // 개발 환경에서만 실제 에러 메시지 포함
+        publicErrorMessage = process.env.NODE_ENV === 'development' ? error.message : publicErrorMessage;
     }
+    
+    // detail은 항상 문자열로 통일 (개발 환경에서만)
+    errorDetail = process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : String(error)) : undefined;
+
+
     return res.status(statusCode).json({
       message: publicErrorMessage,
-      error: process.env.NODE_ENV === 'development' ? error.message : "오류 발생",
-      detail: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      error: errorName, // 에러 이름 또는 코드 전달
+      detail: errorDetail,
     });
   }
 }
