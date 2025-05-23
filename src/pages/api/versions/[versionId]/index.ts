@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getVersionWithProject } from '@/repositories/version.repository';
 import { toVersionHeaderDto } from '@/dtos/versions/toVersionHeaderDto';
+import { VersionWithProjectAndAuthor } from '@/types/version';
 
 export default async function handler(
   req: NextApiRequest,
@@ -13,12 +14,9 @@ export default async function handler(
 
   try {
     const version = await getVersionWithProject(versionId);
+    if (!version) return res.status(404).json({ message: 'Version not found' });
 
-    if (!version) {
-      return res.status(404).json({ message: 'Version not found' });
-    }
-
-    const dto = toVersionHeaderDto(version);
+    const dto = toVersionHeaderDto(version as VersionWithProjectAndAuthor);
     return res.status(200).json(dto);
   } catch (error) {
     console.error('[GET /api/versions/:versionId]', error);
