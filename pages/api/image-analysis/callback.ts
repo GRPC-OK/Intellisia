@@ -31,8 +31,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const updatedVersion = await prisma.version.update({
       where: { id: parseInt(versionId as string, 10) },
       data: {
-        imageAnalysisStatus: status as StepStatus, // 'success' or 'fail'
-        imageAnalysisS3Url: s3Url as string | null, // s3Url or null
+        imageStatus: status as StepStatus, // Changed from imageAnalysisStatus
+        imageAnalysisS3Url: s3Url as string | null, // This field remains
       },
     });
 
