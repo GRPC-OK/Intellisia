@@ -5,10 +5,6 @@ on:
     inputs:
       versionName:
         required: true
-      projectId:
-        required: true
-      callbackUrl:
-        required: true
       repo:
         required: true
       ref:
@@ -68,9 +64,10 @@ jobs:
       # 4. 빌드 결과를 백엔드로 전송
       - name: Upload result to backend
         run: |
-          # 빌드 성공/실패 결과를 callbackUrl로 POST 요청하여 알림
+          # 빌드 성공/실패 결과를 고정된 callbackUrl로 POST 요청하여 알림
+          CALLBACK_URL="http://3.35.153.146:3000/api/image-build/result"
           if [ "${{ steps.build-push.outputs.status }}" = "success" ]; then
-            curl -X POST "${{ github.event.inputs.callbackUrl }}?versionName=${{ github.event.inputs.versionName }}&projectId=${{ github.event.inputs.projectId }}&status=success"
+            curl -X POST "$CALLBACK_URL?versionName=${{ github.event.inputs.versionName }}&status=success"
           else
-            curl -X POST "${{ github.event.inputs.callbackUrl }}?versionName=${{ github.event.inputs.versionName }}&projectId=${{ github.event.inputs.projectId }}&status=fail"
+            curl -X POST "$CALLBACK_URL?versionName=${{ github.event.inputs.versionName }}&status=fail"
           fi
