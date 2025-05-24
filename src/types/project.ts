@@ -23,8 +23,8 @@ export interface ProjectDetail {
   updatedAt: string;
   owner: Contributor;
   contributors: Contributor[];
-  versions: VersionSummary[];
 }
+
 export interface Version {
   id: number;
   name: string;

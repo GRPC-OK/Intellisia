@@ -1,20 +1,17 @@
-// project.service.ts
-import { getProjectById } from '@/repositories/project.repository';
-import { getVersionsByProject } from '@/repositories/version.repository';
+import {
+  getProjectById,
+  getProjectByName,
+} from '@/repositories/project.repository';
 import { toProjectDetailDto } from '@/dtos/project/toProjectDetailDto';
-import { VersionSummary } from '@/types/project';
 
-export const getProjectDetail = async (
-  projectId: number,
-  sort: 'asc' | 'desc'
-) => {
+export const getProjectDetail = async (projectId: number) => {
   const project = await getProjectById(projectId);
   if (!project) return null;
+  return toProjectDetailDto(project);
+};
 
-  const versions: VersionSummary[] = await getVersionsByProject(
-    projectId,
-    sort
-  );
-
-  return toProjectDetailDto(project, versions);
+export const getProjectDetailByName = async (projectName: string) => {
+  const project = await getProjectByName(projectName);
+  if (!project) return null;
+  return toProjectDetailDto(project);
 };

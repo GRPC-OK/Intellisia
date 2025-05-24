@@ -1,5 +1,9 @@
-import { getVersionStatusById } from '@/repositories/version.repository';
+import {
+  getVersionsByProject,
+  getVersionStatusById,
+} from '@/repositories/version.repository';
 import { VersionFlowStatusResponseDto } from '@/dtos/versions/VersionFlowStatusResponseDto';
+import { toVersionSummaryList } from '@/dtos/versions/toVersionSummaryList';
 
 export const getVersionFlowStatus = async (
   versionId: number
@@ -19,4 +23,12 @@ export const getVersionFlowStatus = async (
       deploy: version.deployStatus,
     },
   };
+};
+
+export const getVersionsOfProject = async (
+  projectId: number,
+  sort: 'asc' | 'desc'
+) => {
+  const versions = await getVersionsByProject(projectId, sort);
+  return toVersionSummaryList(versions);
 };

@@ -12,69 +12,84 @@ import SortControl from '@/components/project-detail/SortControl';
 
 export default function ProjectDetailPage() {
   const router = useRouter();
-
   const { projectName } = router.query;
 
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [versions, setVersions] = useState<VersionSummary[]>([]);
   const [sort, setSort] = useState<'newest' | 'oldest'>('oldest');
-  const [loading, setLoading] = useState(false);
+
+  const [projectLoading, setProjectLoading] = useState(true);
+  const [versionsLoading, setVersionsLoading] = useState(false);
 
   useEffect(() => {
     if (typeof projectName !== 'string') return;
 
     const fetchProject = async () => {
-      setLoading(true);
-      const res = await fetch(`/api/project/${projectName}?sort=${sort}`);
-        
+      setProjectLoading(true);
+      const res = await fetch(`/api/project/${projectName}`);
       const data = await res.json();
       setProject(data);
-      setVersions(data.versions);
-      setLoading(false);
+      setProjectLoading(false);
     };
 
     fetchProject();
+  }, [projectName]);
 
-  }, [projectName, sort]);
+  useEffect(() => {
+    if (!project?.id) return;
+
+    const fetchVersions = async () => {
+      setVersionsLoading(true);
+      const res = await fetch(
+        `/api/versions?projectId=${project.id}&sort=${sort}`
+      );
+      const data = await res.json();
+      setVersions(data);
+      setVersionsLoading(false);
+    };
+
+    fetchVersions();
+  }, [project?.id, sort]);
 
   const handleVersionClick = (version: VersionSummary) => {
-    router.push(`/version/${version.name}`);
+    router.push(`/project/${project?.name}/version/${version.id}`);
   };
-
-  if (!project) return <div className="p-6 text-white">Loading...</div>;
 
   return (
     <>
       <Head>
-        <title>{project.name} - Project Detail</title>
+        <title>{project?.name ?? 'Project'} - Project Detail</title>
       </Head>
 
       <div className="flex flex-col md:flex-row gap-6 px-6 py-8 max-w-7xl mx-auto">
-        {/* Left side */}
         <div className="flex-1 flex flex-col gap-6">
-          <ProjectHeader
-            projectName={project.name}
-            creatorName={project.owner.name}
-          />
-
-          {/* 버튼 오른쪽 정렬 */}
-          <div className="flex justify-end">
-            <SortControl sort={sort} setSort={setSort} />
-          </div>
-
-          {loading ? (
-            <div className="text-white">Loading versions...</div>
+          {projectLoading ? (
+            <div className="text-white">Loading project...</div>
           ) : (
-            <VersionList
-              versions={versions}
-              onVersionClick={handleVersionClick}
-            />
+            <>
+              <ProjectHeader
+                projectName={project!.name}
+                creatorName={project!.owner.name}
+              />
+
+              <div className="flex justify-end">
+                <SortControl sort={sort} setSort={setSort} />
+              </div>
+
+              {versionsLoading ? (
+                <div className="text-white">Loading versions...</div>
+              ) : (
+                <VersionList
+                  versions={versions}
+                  onVersionClick={handleVersionClick}
+                />
+              )}
+            </>
           )}
         </div>
 
-        {/* Right side */}
         <div className="w-full md:w-80 shrink-0">
-          <ProjectSidebar project={project} />
+          {project && <ProjectSidebar project={project} />}
         </div>
       </div>
     </>
