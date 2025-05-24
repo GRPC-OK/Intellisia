@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getVersionsByProject } from '@/repositories/version.repository';
+import { getVersionsOfProject } from '@/services/version.service';
 
 export default async function handler(
   req: NextApiRequest,
@@ -13,7 +13,7 @@ export default async function handler(
   }
 
   try {
-    const versions = await getVersionsByProject(projectId, sort);
+    const versions = await getVersionsOfProject(projectId, sort);
     res.status(200).json(versions);
   } catch (error) {
     console.error('[GET /api/versions]', error);
