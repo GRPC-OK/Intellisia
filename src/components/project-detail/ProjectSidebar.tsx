@@ -18,10 +18,6 @@ function formatRelative(dateStr: string) {
 export default function ProjectSidebar({ project }: ProjectSidebarProps) {
   return (
     <aside className="w-full md:max-w-sm shrink-0 rounded-2xl border border-[#30363D] bg-[#161B22] px-6 py-5 flex flex-col gap-5 text-white">
-      <div className="text-xl font-bold tracking-tight leading-snug">
-        {project.name}
-      </div>
-
       <section className="flex flex-col gap-1">
         <h3 className="text-sm text-gray-400 font-medium">project</h3>
         <p className="text-base text-gray-200 leading-relaxed">
