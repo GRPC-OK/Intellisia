@@ -10,12 +10,13 @@ export async function startCodeAnalysis(versionId: number) {
 
   if (!version) throw new Error('Version not found');
 
-  // 상태 업데이트
+  // 버전 상태 업데이트
   await updateVersionStatusSafely(versionId, {
     codeStatus: 'pending',
     flowStatus: 'pending',
   });
 
+  // codeAnalysis 생성 및 상태 업데이트
   await prisma.codeAnalysis.upsert({
     where: { versionId },
     update: { status: 'pending' },
