@@ -1,14 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { handleSemgrepResult } from '@/services/code-analysis-service/code-analysis.service';
-import type { SarifCodeIssue } from '@/types/sarif';
-
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '3mb',
-    },
-  },
-};
+import { handleSemgrepResult } from '@/services/code-analysis-service/handle-semgrep-result.service';
 
 export default async function handler(
   req: NextApiRequest,
@@ -23,17 +14,19 @@ export default async function handler(
     return res.status(400).json({ message: 'Invalid versionId' });
   }
 
-  try {
-    const contentType = req.headers['content-type'] ?? '';
-    const issues = req.body as SarifCodeIssue[];
-    await handleSemgrepResult(versionId, issues, contentType);
+  const { status, fileUrl } = req.body;
 
-    return res.status(200).json({ message: '분석 결과 저장 완료' });
+  if (!status || !fileUrl) {
+    return res.status(400).json({ message: 'Missing status or fileUrl' });
+  }
+
+  try {
+    await handleSemgrepResult(versionId, status, fileUrl);
+    return res.status(200).json({ message: '정적 분석 결과 저장 완료' });
   } catch (error) {
-    console.error('[CODE ANALYSIS ERROR]', error);
-    return res.status(500).json({
-      message: '분석 결과 저장 실패',
-      error: String(error),
-    });
+    console.error('[HANDLE SEMGREP RESULT ERROR]', error);
+    return res
+      .status(500)
+      .json({ message: '분석 결과 저장 실패', error: String(error) });
   }
 }

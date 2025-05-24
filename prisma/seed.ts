@@ -2,67 +2,61 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  const user = await prisma.user.create({
-    data: {
-      name: '테스트유저',
+  const user = await prisma.user.upsert({
+    where: { email: 'test@example.com' },
+    update: {},
+    create: {
+      name: '테스트 사용자',
       email: 'test@example.com',
-      avatarUrl: '/avatar.png',
+      avatarUrl: 'https://i.pravatar.cc/150?u=test@example.com',
     },
   });
 
-  const project = await prisma.project.create({
-    data: {
-      name: 'Test Next.js App',
-      description: '테스트용 공개 레포',
-      githubUrl: 'https://github.com/JSHWJ/Test-Nextjs-app',
-      domain: 'test-app.localhost',
+  const project = await prisma.project.upsert({
+    where: { name: '샘플 프로젝트' },
+    update: {},
+    create: {
+      name: '샘플 프로젝트',
+      description: '정적 분석 테스트용 프로젝트',
+      githubUrl: 'https://github.com/sample/repo',
+      domain: 'sample.com',
       ownerId: user.id,
     },
   });
 
-  const helm = await prisma.helmValues.create({
+  const version = await prisma.version.create({
     data: {
-      content: {
-        replicaCount: 1,
-        image: {
-          repository: 'test-image',
-          tag: 'latest',
-        },
-      },
+      name: 'v1.0.0',
+      description: '테스트 버전입니다',
+      imageTag: 'v1.0.0',
+      branch: 'main',
+      commitHash: 'abc123',
+      applicationName: 'sample-app',
+      isCurrent: true,
+      authorId: user.id,
+      projectId: project.id,
+      codeStatus: 'success',
+      buildStatus: 'success',
+      imageStatus: 'success',
+      deployStatus: 'none',
+      approveStatus: 'none',
+      flowStatus: 'success',
     },
   });
 
-  await prisma.version.create({
+  await prisma.codeAnalysis.create({
     data: {
-      name: 'v0.1.0',
-      description: '처음 테스트 버전입니다',
-      isCurrent: false,
-      branch: 'main',
-      commitHash: '', // 아직 없음
-      applicationName: 'test-next-app',
-      imageTag: '',
-
-      codeStatus: 'none',
-      buildStatus: 'none',
-      imageStatus: 'none',
-      approveStatus: 'none',
-      deployStatus: 'none',
-      flowStatus: 'none',
-
-      projectId: project.id,
-      authorId: user.id,
-      helmValuesId: helm.id,
+      versionId: version.id,
+      status: 'passed_with_issues',
+      sarifUrl: '/full.sarif',
+      errorLogUrl: null,
     },
   });
 }
 
 main()
-  .then(() => {
-    console.log('✅ 테스트 데이터 삽입 완료');
-  })
   .catch((e) => {
-    console.error('❌ 오류:', e);
+    console.error(e);
+    process.exit(1);
   })
-  .finally(() => {
-    prisma.$disconnect();
-  });
+  .finally(() => prisma.$disconnect());
