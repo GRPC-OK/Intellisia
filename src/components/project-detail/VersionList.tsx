@@ -15,6 +15,7 @@ export default function VersionList({
       {versions.map((version) => (
         <VersionCard
           key={version.name}
+          id={version.id}
           name={version.name}
           description={version.description}
           isCurrent={version.isCurrent}
