@@ -45,30 +45,31 @@ model ProjectContributors {
 }
 
 model Version {
-  id              Int           @id @default(autoincrement())
-  name            String
-  description     String
-  isCurrent       Boolean       @default(false)
-  imageTag        String
-  branch          String
-  commitHash      String
-  applicationName String
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  codeStatus      StepStatus    @default(none)
-  buildStatus     StepStatus    @default(none)
-  imageStatus     StepStatus    @default(none)
-  deployStatus    StepStatus    @default(none)
-  approveStatus   ApproveStatus @default(none)
-  flowStatus      FlowStatus    @default(none)
-  helmValuesId    Int?          @unique
-  projectId       Int
-  authorId        Int
-  codeAnalysis    CodeAnalysis? @relation("CodeAnalysisForVersion")
-  codeIssues      CodeIssue[]
-  author          User          @relation(fields: [authorId], references: [id])
-  helmValues      HelmValues?   @relation("VersionHelmRelation", fields: [helmValuesId], references: [id])
-  project         Project       @relation(fields: [projectId], references: [id])
+  id                 Int           @id @default(autoincrement())
+  name               String
+  description        String
+  isCurrent          Boolean       @default(false)
+  imageTag           String
+  branch             String
+  commitHash         String
+  applicationName    String
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  codeStatus         StepStatus    @default(none)
+  buildStatus        StepStatus    @default(none)
+  imageStatus        StepStatus    @default(none)
+  deployStatus       StepStatus    @default(none)
+  approveStatus      ApproveStatus @default(none)
+  flowStatus         FlowStatus    @default(none)
+  imageAnalysisS3Url String?
+  helmValuesId       Int?          @unique
+  projectId          Int
+  authorId           Int
+  codeAnalysis       CodeAnalysis? @relation("CodeAnalysisForVersion")
+  codeIssues         CodeIssue[]
+  author             User          @relation(fields: [authorId], references: [id])
+  helmValues         HelmValues?   @relation("VersionHelmRelation", fields: [helmValuesId], references: [id])
+  project            Project       @relation(fields: [projectId], references: [id])
 
   @@unique([projectId, name])
 }
