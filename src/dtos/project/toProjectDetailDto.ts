@@ -8,13 +8,11 @@ export function toProjectDetailDto(project: {
   domain: string;
   createdAt: Date;
   updatedAt: Date;
-  owner: Contributor | null;
+  owner: Contributor;
   contributors: {
     user: Contributor;
   }[];
-}): ProjectDetail | null {
-  if (!project.owner) return null;
-
+}): ProjectDetail {
   return {
     id: project.id,
     name: project.name,

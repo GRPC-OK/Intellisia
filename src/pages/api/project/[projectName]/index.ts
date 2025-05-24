@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getProjectByName } from '@/repositories/project.repository';
+import { getProjectDetailByName } from '@/services/project.service';
 
 export default async function handler(
   req: NextApiRequest,
@@ -12,11 +12,14 @@ export default async function handler(
   }
 
   try {
-    const project = await getProjectByName(projectName);
-    if (!project) return res.status(404).json({ message: 'Project Not Found' });
-    res.status(200).json(project); // versions 없음
+    const project = await getProjectDetailByName(projectName);
+    if (!project) {
+      return res.status(404).json({ message: 'Project Not Found' });
+    }
+
+    return res.status(200).json(project);
   } catch (err) {
     console.error('[GET /api/project/[projectName]]', err);
-    res.status(500).json({ message: 'Internal Server Error' });
+    return res.status(500).json({ message: 'Internal Server Error' });
   }
 }

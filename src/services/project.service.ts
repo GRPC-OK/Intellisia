@@ -12,6 +12,6 @@ export const getProjectDetail = async (projectId: number) => {
 
 export const getProjectDetailByName = async (projectName: string) => {
   const project = await getProjectByName(projectName);
-  if (!project) return null;
+  if (!project || !project.owner) return null;
   return toProjectDetailDto(project);
 };
