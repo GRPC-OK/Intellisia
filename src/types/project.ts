@@ -8,6 +8,7 @@ export interface User {
 export type Contributor = Pick<User, 'id' | 'name' | 'avatarUrl'>;
 
 export interface VersionSummary {
+  id: number;
   name: string;
   description: string;
   isCurrent: boolean;
@@ -23,8 +24,8 @@ export interface ProjectDetail {
   updatedAt: string;
   owner: Contributor;
   contributors: Contributor[];
-  versions: VersionSummary[];
 }
+
 export interface Version {
   id: number;
   name: string;

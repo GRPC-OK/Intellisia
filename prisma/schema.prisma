@@ -27,9 +27,9 @@ model Project {
   domain            String                @unique
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
-  ownerId           Int?
+  ownerId           Int
   defaultHelmValues Json?
-  owner             User?                  @relation("ProjectOwner", fields: [ownerId], references: [id])
+  owner             User                  @relation("ProjectOwner", fields: [ownerId], references: [id])
   contributors      ProjectContributors[]
   versions          Version[]
 }
@@ -111,8 +111,8 @@ model CodeIssue {
   @@index([codeAnalysisId])
 }
 
-model sunwoo{
-  id Int @id @default(autoincrement())
+model sunwoo {
+  id   Int    @id @default(autoincrement())
   name String
 }
 
