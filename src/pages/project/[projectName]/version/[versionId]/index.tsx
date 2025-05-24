@@ -9,7 +9,6 @@ import VersionHeader from '@/components/version/VersionHeader';
 import { VersionFlowStatus } from '@/types/version-flow';
 import {
   STAGE_CENTER,
-  RADIUS,
   StageKey,
   isStageClickable,
   getStageRoute,
@@ -71,7 +70,7 @@ export default function VersionFlowPage() {
     if (typeof versionId !== 'string') return;
 
     try {
-      const res = await fetch(`/api/versions/${versionId}/approve`, {
+      const res = await fetch(`/api/versions/${versionId}/approval-decision`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ approved }),
