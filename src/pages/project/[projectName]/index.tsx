@@ -9,6 +9,7 @@ import ProjectSidebar from '@/components/project-detail/ProjectSidebar';
 import ProjectHeader from '@/components/project-detail/ProjectHeader';
 import VersionList from '@/components/project-detail/VersionList';
 import SortControl from '@/components/project-detail/SortControl';
+import NewDeploymentButton from '@/components/project-detail/NewDeploymentButton';
 
 export default function ProjectDetailPage() {
   const router = useRouter();
@@ -52,7 +53,11 @@ export default function ProjectDetailPage() {
   }, [project?.id, sort]);
 
   const handleVersionClick = (version: VersionSummary) => {
-    router.push(`/project/${project?.name}/version/${version.id}`);
+    router.push(`/project/${project!.name}/version/${version.id}`);
+  };
+
+  const handleNewDeploy = () => {
+    router.push(`/project/${project!.name}/prepare-run`);
   };
 
   return (
@@ -61,35 +66,54 @@ export default function ProjectDetailPage() {
         <title>{project?.name ?? 'Project'} - Project Detail</title>
       </Head>
 
-      <div className="flex flex-col md:flex-row gap-6 px-6 py-8 max-w-7xl mx-auto">
-        <div className="flex-1 flex flex-col gap-6">
+      <div className="min-h-screen bg-[#0D1117] text-white">
+        <div className="max-w-7xl mx-auto px-6 py-8">
           {projectLoading ? (
             <div className="text-white">Loading project...</div>
           ) : (
             <>
-              <ProjectHeader
-                projectName={project!.name}
-                creatorName={project!.owner.name}
-              />
-
-              <div className="flex justify-end">
-                <SortControl sort={sort} setSort={setSort} />
+              {/* 헤더 영역 - 프로젝트명과 New Deployment 버튼 */}
+              <div className="flex items-center justify-between mb-6">
+                <ProjectHeader
+                  projectName={project!.name}
+                  creatorName={project!.owner.name}
+                />
+                <NewDeploymentButton
+                  onClick={handleNewDeploy}
+                  label="New Deployment"
+                />
               </div>
 
-              {versionsLoading ? (
-                <div className="text-white">Loading versions...</div>
-              ) : (
-                <VersionList
-                  versions={versions}
-                  onVersionClick={handleVersionClick}
-                />
-              )}
+              {/* 구분선 */}
+              <hr className="border-t border-[#30363D] mb-6" />
+
+              {/* 메인 콘텐츠와 사이드바 */}
+              <div className="flex gap-8">
+                {/* 메인 콘텐츠 영역 */}
+                <div className="flex-1">
+                  {/* 정렬 컨트롤 */}
+                  <div className="flex justify-end mb-4">
+                    <SortControl sort={sort} setSort={setSort} />
+                  </div>
+
+                  {/* 버전 목록 */}
+                  {versionsLoading ? (
+                    <div className="text-white">Loading versions...</div>
+                  ) : (
+                    <VersionList
+                      versions={versions}
+                      onVersionClick={handleVersionClick}
+                    />
+                  )}
+                </div>
+
+                {/* 사이드바 영역 */}
+                <div className="w-80 shrink-0">
+                  {project && <ProjectSidebar project={project} />}
+                </div>
+              </div>
             </>
           )}
-        </div>
-
-        <div className="w-full md:w-80 shrink-0">
-          {project && <ProjectSidebar project={project} />}
         </div>
       </div>
     </>
