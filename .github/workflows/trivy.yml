@@ -139,8 +139,10 @@ jobs:
       - name: Send final result to backend
         # always() # 모든 단계 결과와 무관하게 항상 실행 (필요 시)
         run: |
+          CALLBACK_URL="http://3.35.153.146:3000/api/image-analysis/callback"
           FINAL_STATUS="fail" # 최종 상태 기본값은 실패
           FINAL_S3_URL=""
+
 
           BUILD_STATUS="${{ steps.build_push_image.outputs.build_status }}"
           SCAN_STATUS="${{ steps.trivy_scan.outputs.scan_status }}"
