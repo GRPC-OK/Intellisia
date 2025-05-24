@@ -1,0 +1,185 @@
+name: Run Trivy
+
+on:
+  workflow_dispatch:
+    inputs:
+      versionName:
+        description: 'The version name/tag for the image'
+        required: true
+      projectId:
+        description: 'The ID of the project associated with this build'
+        required: true
+      callbackUrl:
+        description: 'The URL to send the overall build and analysis result to'
+        required: true
+      repo:
+        description: 'Repository name (e.g., owner/repo) to clone code from'
+        required: true
+      ref:
+        description: 'Git ref (branch, tag, or SHA) to clone from'
+        required: true
+
+
+jobs:
+  build-and-scan: # Job 이름을 build-and-scan으로 변경
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # Required for OIDC AWS authentication
+      contents: read  # Required to checkout the repository
+
+    steps:
+      # 1. 레포지토리 클론
+      - name: Clone target repository
+        uses: actions/checkout@v4 # actions/checkout 사용으로 권장
+        with:
+          repository: ${{ github.event.inputs.repo }}
+          ref: ${{ github.event.inputs.ref }}
+          token: ${{ secrets.PLATFORM_GITHUB_TOKEN }} # 비공개 레포지토리 클론 시 필요
+
+      # 2. Docker Buildx 셋업
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 2-1. AWS 로그인 (OIDC 사용)
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/GitHubActions-ECR-S3-AccessRole # FIXME: 사용자 환경에 맞는 IAM 역할 ARN으로 수정 필요
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # 3. 이미지 빌드 및 ECR 푸시
+      - name: Build and Push Docker image to ECR
+        id: build_push_image # id 변경 (띄어쓰기 대신 언더스코어)
+        run: |
+          ECR_REPOSITORY_NAME="intellisia/ecr" # ECR 레포지토리 이름 고정
+          IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY_NAME:${{ github.event.inputs.versionName }}"
+
+          echo "Attempting to build and push Docker image: $IMAGE_URI"
+
+          if docker build -t "$IMAGE_URI" .; then
+            echo "Docker image built successfully."
+            if docker push "$IMAGE_URI"; then
+              echo "Docker image pushed to ECR successfully."
+              echo "build_status=success" >> $GITHUB_OUTPUT # 빌드 상태 출력
+              echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT # 빌드된 이미지 URI 출력
+            else
+              echo "Docker image push failed."
+              echo "build_status=fail" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "Docker image build failed."
+            echo "build_status=fail" >> $GITHUB_OUTPUT
+          fi
+        # always() # 빌드 실패 시에도 다음 스캔 시도 여부 (여기서는 빌드 실패 시 스캔 안함)
+
+
+      # 4. Trivy 설치 (빌드 성공 시에만)
+      - name: Install Trivy
+        if: steps.build_push_image.outputs.build_status == 'success' # 빌드 성공 시에만 실행
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
+
+      # 5. Trivy로 이미지 스캔 (빌드 성공 시에만)
+      - name: Scan ECR image with Trivy
+        id: trivy_scan
+        if: steps.build_push_image.outputs.build_status == 'success' # 빌드 성공 시에만 실행
+        run: |
+          set -o pipefail
+          IMAGE_TO_SCAN="${{ steps.build_push_image.outputs.image_uri }}" # 빌드된 이미지 URI 사용
+          TRIVY_OUTPUT_FILE="results.sarif"
+
+          echo "Scanning image: $IMAGE_TO_SCAN"
+
+          # Trivy로 이미지 스캔, SARIF 형식으로 결과 저장.
+          # --exit-code 0: 취약점이 발견되어도 성공으로 처리 (결과 업로드 및 콜백은 항상 수행)
+          if trivy image --format sarif --output "$TRIVY_OUTPUT_FILE" --exit-code 0 "$IMAGE_TO_SCAN"; then
+            echo "Trivy scan command completed successfully (vulnerabilities may exist)."
+            echo "scan_status=success" >> $GITHUB_OUTPUT # 스캔 상태 출력
+          else
+            TRIVY_EXIT_CODE=$?
+            echo "Trivy scan command failed (exit code: $TRIVY_EXIT_CODE)."
+            echo "scan_status=fail" >> $GITHUB_OUTPUT
+          fi
+
+          # 생성된 결과 파일이 비어있는지 확인 (Trivy가 이미지를 못찾거나 분석 못했을 경우)
+          if [ ! -s "$TRIVY_OUTPUT_FILE" ]; then
+            echo "Trivy output file is empty or does not exist."
+            echo "scan_status=fail" >> $GITHUB_OUTPUT # 빈 파일이므로 실패 처리
+          fi
+
+      # 6. Trivy 스캔 결과를 S3에 업로드 (스캔 성공 시에만)
+      - name: Upload Trivy scan results to S3
+        id: s3_upload
+        if: steps.trivy_scan.outputs.scan_status == 'success' # 스캔 성공 시에만 업로드
+        run: |
+          S3_KEY="image-analysis-results/${{ github.event.inputs.projectId }}/${{ github.event.inputs.versionName }}/results.sarif" # S3 경로에 projectId와 versionName 포함
+          S3_FULL_URL="s3://${{ env.S3_BUCKET_NAME }}/$S3_KEY"
+
+          echo "Uploading results.sarif to $S3_FULL_URL"
+          if aws s3 cp results.sarif "$S3_FULL_URL"; then
+            echo "Successfully uploaded results.sarif to S3."
+            echo "s3_url=$S3_FULL_URL" >> $GITHUB_OUTPUT # S3 URL 출력
+            echo "upload_status=success" >> $GITHUB_OUTPUT
+          else
+            echo "Failed to upload results.sarif to S3."
+            echo "upload_status=fail" >> $GITHUB_OUTPUT
+          fi
+
+
+      # 7. 최종 결과를 백엔드로 전송
+      - name: Send final result to backend
+        # always() # 모든 단계 결과와 무관하게 항상 실행 (필요 시)
+        run: |
+          FINAL_STATUS="fail" # 최종 상태 기본값은 실패
+          FINAL_S3_URL=""
+
+          BUILD_STATUS="${{ steps.build_push_image.outputs.build_status }}"
+          SCAN_STATUS="${{ steps.trivy_scan.outputs.scan_status }}"
+          UPLOAD_STATUS="${{ steps.s3_upload.outputs.upload_status }}"
+          S3_GEN_URL="${{ steps.s3_upload.outputs.s3_url }}" # S3 업로드 단계에서 생성된 URL
+
+          echo "Build Status: $BUILD_STATUS"
+          echo "Scan Status: $SCAN_STATUS"
+          echo "Upload Status: $UPLOAD_STATUS"
+          echo "Generated S3 URL: $S3_GEN_URL"
+
+          # 최종 성공 조건: 빌드 성공 AND 스캔 성공 AND S3 업로드 성공
+          if [ "$BUILD_STATUS" = "success" ] && \
+             [ "$SCAN_STATUS" = "success" ] && \
+             [ "$UPLOAD_STATUS" = "success" ]; then
+            OVERALL_STATUS="success"
+            S3_RESULT_URL="$S3_GEN_URL"
+          else
+            OVERALL_STATUS="fail"
+            # 오류 로그나 자세한 정보는 백엔드에서 자체적으로 판단하거나,
+            # GHA의 run URL을 같이 보내서 GHA 로그를 참조하도록 할 수 있습니다.
+            S3_RESULT_URL="" # 실패 시 S3 URL은 없음
+          fi
+          
+          # JSON 페이로드를 올바르게 구성하기 위해 `jq` 사용 권장 (설치되어 있지 않다면 `npm install -g jq` 필요)
+          # 또는 복잡한 JSON 대신 간단한 쿼리 파라미터나 폼 데이터로 전송
+          
+          # JSON 페이로드 구성 (curl로 직접 구성 시 따옴표 이스케이프 주의)
+          # 여기서는 간단한 형태의 JSON 사용
+          JSON_PAYLOAD="{ \
+            \"versionId\": \"${{ github.event.inputs.versionId }}\", \
+            \"status\": \"$OVERALL_STATUS\", \
+            \"s3Url\": \"$S3_RESULT_URL\", \
+            \"githubRunUrl\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\" \
+          }"
+          
+          echo "Sending JSON Payload: $JSON_PAYLOAD"
+
+          curl -X POST \
+               -H "Content-Type: application/json" \
+               -d "$JSON_PAYLOAD" \
+               "${{ github.event.inputs.callbackUrl }}"
