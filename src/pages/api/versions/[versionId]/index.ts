@@ -3,6 +3,7 @@ import { getVersionWithProject } from '@/repositories/version.repository';
 import { toVersionHeaderDto } from '@/dtos/versions/toVersionHeaderDto';
 import { VersionWithProjectAndAuthor } from '@/types/version';
 
+// 버전 이름 + 버전 id 가져오는 api
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse

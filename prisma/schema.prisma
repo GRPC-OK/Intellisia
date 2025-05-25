@@ -45,28 +45,29 @@ model ProjectContributors {
 }
 
 model Version {
-  id                 Int           @id @default(autoincrement())
-  name               String
-  description        String
-  isCurrent          Boolean       @default(false)
-  imageTag           String
-  branch             String
-  commitHash         String
-  applicationName    String
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
-  codeStatus         StepStatus    @default(none)
-  buildStatus        StepStatus    @default(none)
-  imageStatus        StepStatus    @default(none)
-  deployStatus       StepStatus    @default(none)
-  approveStatus      ApproveStatus @default(none)
-  flowStatus         FlowStatus    @default(none)
+  id              Int      @id @default(autoincrement())
+  name            String
+  description     String
+  isCurrent       Boolean  @default(false)
+  imageTag        String
+  branch          String
+  commitHash      String?
+  applicationName String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  codeStatus    StepStatus    @default(none)
+  buildStatus   StepStatus    @default(none)
+  imageStatus   StepStatus    @default(none)
+  deployStatus  StepStatus    @default(none)
+  approveStatus ApproveStatus @default(none)
+  flowStatus    FlowStatus    @default(none)
+
   imageAnalysisS3Url String?
   helmValuesId       Int?          @unique
   projectId          Int
   authorId           Int
   codeAnalysis       CodeAnalysis? @relation("CodeAnalysisForVersion")
-  codeIssues         CodeIssue[]
   author             User          @relation(fields: [authorId], references: [id])
   helmValues         HelmValues?   @relation("VersionHelmRelation", fields: [helmValuesId], references: [id])
   project            Project       @relation(fields: [projectId], references: [id])
@@ -82,39 +83,14 @@ model HelmValues {
 }
 
 model CodeAnalysis {
-  id        Int            @id @default(autoincrement())
-  versionId Int            @unique
-  errorLog  String?
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  hasIssue  Boolean
-  status    AnalysisStatus
-  version   Version        @relation("CodeAnalysisForVersion", fields: [versionId], references: [id])
-  issues    CodeIssue[]
-}
-
-model CodeIssue {
-  id             Int          @id @default(autoincrement())
-  codeAnalysisId Int
-  ruleId         String
-  message        String
-  severity       String?
-  filePath       String
-  line           Int
-  column         Int?
-  versionId      Int
-  cve            String?
-  cwe            String?
-  codeAnalysis   CodeAnalysis @relation(fields: [codeAnalysisId], references: [id], onDelete: Cascade)
-  version        Version      @relation(fields: [versionId], references: [id])
-
-  @@index([versionId])
-  @@index([codeAnalysisId])
-}
-
-model sunwoo {
-  id   Int    @id @default(autoincrement())
-  name String
+  id          Int            @id @default(autoincrement())
+  versionId   Int            @unique
+  sarifUrl    String?
+  errorLogUrl String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  status      AnalysisStatus
+  version     Version        @relation("CodeAnalysisForVersion", fields: [versionId], references: [id])
 }
 
 enum StepStatus {
@@ -139,7 +115,8 @@ enum FlowStatus {
 }
 
 enum AnalysisStatus {
-  pending
-  success
-  fail
+  pending // 분석 실행 중
+  failed // 분석 실행 실패 
+  passed_with_issues // 분석 성공, 이슈 있음
+  passed_no_issues // 분석 성공, 이슈 없음 
 }

@@ -2,26 +2,24 @@ import {
   getVersionsByProject,
   getVersionStatusById,
 } from '@/repositories/version.repository';
-import { VersionFlowStatusResponseDto } from '@/dtos/versions/VersionFlowStatusResponseDto';
+import { VersionFlowStatus } from '@/types/version-flow';
 import { toVersionSummaryList } from '@/dtos/versions/toVersionSummaryList';
 
 export const getVersionFlowStatus = async (
   versionId: number
-): Promise<VersionFlowStatusResponseDto | null> => {
+): Promise<VersionFlowStatus | null> => {
   const version = await getVersionStatusById(versionId);
   if (!version) return null;
 
   return {
-    versionId: version.id,
+    codeStatus: version.codeStatus,
+    buildStatus: version.buildStatus,
+    imageStatus: version.imageStatus,
+    approveStatus: version.approveStatus,
+    deployStatus: version.deployStatus,
     flowStatus: version.flowStatus,
+    versionId: version.id,
     versionName: version.name,
-    statuses: {
-      code: version.codeStatus,
-      build: version.buildStatus,
-      image: version.imageStatus,
-      approve: version.approveStatus,
-      deploy: version.deployStatus,
-    },
   };
 };
 

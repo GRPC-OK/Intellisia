@@ -43,31 +43,41 @@ jobs:
             echo "status=fail" >> $GITHUB_OUTPUT
           fi
 
-      - name: Debug Semgrep full SARIF output
-        if: steps.semgrep.outputs.status == 'success'
-        run: |
-          echo "=== Semgrep full SARIF ==="
-          cat output/full.sarif
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Upload result to backend
+      - name: Upload SARIF or Error Log to S3
+        id: upload
         run: |
-          if [ "${{ steps.semgrep.outputs.status }}" = "success" ]; then
-            echo "=== Uploading full SARIF JSON to backend ==="
-            cat output/full.sarif
-            curl -X POST "${{ github.event.inputs.callbackUrl }}?versionId=${{ github.event.inputs.versionId }}" \
-              -H "Content-Type: application/json" \
-              --data-binary @output/full.sarif
+          VERSION_ID="${{ github.event.inputs.versionId }}"
+          BUCKET="${{ secrets.S3_BUCKET_NAME }}"
+          REGION="${{ secrets.AWS_REGION }}"
+          STATUS="${{ steps.semgrep.outputs.status }}"
+
+          if [ "$STATUS" = "success" ]; then
+            TARGET_FILE="full.sarif"
+            TARGET_PATH="code-analysis/version-$VERSION_ID/$TARGET_FILE"
           else
-            echo "=== Uploading error log to backend ==="
-            cat output/error.log
-            curl -X POST "${{ github.event.inputs.callbackUrl }}?versionId=${{ github.event.inputs.versionId }}" \
-              -H "Content-Type: text/plain" \
-              --data-binary @output/error.log
+            TARGET_FILE="error.log"
+            TARGET_PATH="code-analysis/version-$VERSION_ID/$TARGET_FILE"
           fi
 
-      - name: Upload SARIF artifact
-        if: steps.semgrep.outputs.status == 'success'
-        uses: actions/upload-artifact@v4
-        with:
-          name: semgrep-sarif
-          path: output/full.sarif
+          aws s3 cp "output/$TARGET_FILE" "s3://$BUCKET/$TARGET_PATH" --acl public-read
+
+          PUBLIC_URL="https://$BUCKET.s3.$REGION.amazonaws.com/$TARGET_PATH"
+          echo "url=$PUBLIC_URL" >> $GITHUB_OUTPUT
+          echo "Uploaded: $PUBLIC_URL"
+
+      - name: Notify Backend
+        run: |
+          curl -X POST "${{ github.event.inputs.callbackUrl }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "versionId": '${{ github.event.inputs.versionId }}',
+              "status": "'${{ steps.semgrep.outputs.status }}'",
+              "fileUrl": "'${{ steps.upload.outputs.url }}'"
+            }'
