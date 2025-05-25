@@ -43,6 +43,6 @@ jobs:
               printf "%s" "${{ secrets.ENV }}" | docker run -d \
                 --name my-container \
                 --env-file /dev/stdin \
-                -p 3000:3000 \
+                -p 80:3000 \
                 -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
                 ${{ secrets.DOCKERHUB_USERNAME }}/my-app:latest
