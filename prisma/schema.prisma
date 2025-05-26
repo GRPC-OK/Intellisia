@@ -52,7 +52,6 @@ model Version {
   imageTag        String
   branch          String
   commitHash      String?
-  applicationName String
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
