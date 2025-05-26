@@ -66,7 +66,7 @@ jobs:
             TARGET_PATH="code-analysis/version-$VERSION_ID/$TARGET_FILE"
           fi
 
-          aws s3 cp "output/$TARGET_FILE" "s3://$BUCKET/$TARGET_PATH" --acl public-read
+          aws s3 cp "output/$TARGET_FILE" "s3://$BUCKET/$TARGET_PATH"
 
           PUBLIC_URL="https://$BUCKET.s3.$REGION.amazonaws.com/$TARGET_PATH"
           echo "url=$PUBLIC_URL" >> $GITHUB_OUTPUT
