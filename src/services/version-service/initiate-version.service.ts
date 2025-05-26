@@ -1,4 +1,5 @@
 import type { Project, Version, Prisma } from '@prisma/client';
+import { createVersionWithAutoName } from '@/services/version-service/processor/version-generator';
 
 interface HelmResourcesRequests {
   cpu?: string;
@@ -54,15 +55,13 @@ function getJsonValue<T>(
 }
 
 export async function initiateVersionInsideTx(
-  tx: Prisma.TransactionClient, // 수정된 부분
+  tx: Prisma.TransactionClient,
   project: Project,
   input: CreateVersionParams
 ): Promise<Version> {
   const { branch, helmValueOverrides } = input;
 
   const targetCommitSha = 'simulated-commit-sha-1234567';
-  const cleanBranchName = branch.replace(/[^a-zA-Z0-9-]/g, '-');
-  const versionName = `${cleanBranchName}-${targetCommitSha.substring(0, 7)}`;
 
   const defaultHelm = project.defaultHelmValues;
   const overrideRequests = helmValueOverrides?.resources?.requests;
@@ -125,18 +124,15 @@ export async function initiateVersionInsideTx(
     data: { content: finalHelmValues },
   });
 
-  return await tx.version.create({
-    data: {
-      name: versionName,
-      description: `"${branch}" 브랜치 실행 (최소 기능)`,
-      isCurrent: false,
-      imageTag: 'pending-build',
-      branch,
-      commitHash: targetCommitSha,
-      applicationName: project.name,
-      projectId: project.id,
-      authorId: project.ownerId || 1,
-      helmValuesId: createdHelmValues.id,
-    },
+  return await createVersionWithAutoName(tx, project.id, {
+    description: `"${branch}" 브랜치 실행 (최소 기능)`,
+    isCurrent: false,
+    imageTag: 'pending-build',
+    branch,
+    commitHash: targetCommitSha,
+    applicationName: project.name,
+    project: { connect: { id: project.id } },
+    author: { connect: { id: project.ownerId || 1 } },
+    helmValues: { connect: { id: createdHelmValues.id } },
   });
 }

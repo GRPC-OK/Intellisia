@@ -1,5 +1,4 @@
 import { Prisma } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
 
 function parseVersion(version: string): [number, number, number] {
   const [major, minor, patch] = version.split('.').map(Number);
@@ -9,53 +8,57 @@ function parseVersion(version: string): [number, number, number] {
 function nextVersion(prev: string): string {
   const [major, minor, patch] = parseVersion(prev);
 
-  if (patch < 5) {
-    return `${major}.${minor}.${patch + 5}`;
-  }
-
-  if (minor < 9) {
-    return `${major}.${minor + 1}.0`;
-  }
-
+  if (patch < 95) return `${major}.${minor}.${patch + 5}`;
+  if (minor < 9) return `${major}.${minor + 1}.0`;
   return `${major + 1}.0.0`;
 }
 
 export async function createVersionWithAutoName(
+  tx: Prisma.TransactionClient,
   projectId: number,
   data: Omit<Prisma.VersionCreateInput, 'name'>
 ) {
   const MAX_RETRIES = 5;
   let attempt = 0;
 
-  // 최초 버전 기준 추출
-  const latest = await prisma.version.findFirst({
+  const latest = await tx.version.findFirst({
     where: { projectId },
     orderBy: { createdAt: 'desc' },
   });
 
-  let currentName = latest ? latest.name : '1.0.0';
+  let currentName = latest?.name ?? '1.0.0';
 
   while (attempt < MAX_RETRIES) {
-    const newName = attempt === 0 ? currentName : nextVersion(currentName);
+    const newName = nextVersion(currentName);
 
     try {
-      return await prisma.version.create({
+      return await tx.version.create({
         data: {
           ...data,
           name: newName,
         },
       });
     } catch (e: unknown) {
-      if (
-        typeof e === 'object' &&
-        e !== null &&
-        'code' in e &&
-        (e as { code: string }).code === 'P2002'
-      ) {
+      const isP2002 =
+        e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
+
+      if (isP2002) {
         attempt++;
         currentName = newName;
         continue;
       }
+
+      console.error('[버전 생성 실패 - 예상 못 한 Prisma 에러]');
+      console.error('typeof e:', typeof e);
+      console.error(
+        'e instanceof PrismaClientKnownRequestError:',
+        e instanceof Prisma.PrismaClientKnownRequestError
+      );
+      console.error(
+        'e instanceof PrismaClientUnknownRequestError:',
+        e instanceof Prisma.PrismaClientUnknownRequestError
+      );
+      console.dir(e, { depth: 10 });
 
       throw e;
     }
