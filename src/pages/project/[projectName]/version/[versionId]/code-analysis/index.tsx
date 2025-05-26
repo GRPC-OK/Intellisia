@@ -1,96 +1,33 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
 import Head from 'next/head';
-
-import ProjectHeader from '@/components/project-detail/ProjectHeader';
-import CodeAnalysisStatusView from '@/components/code-analysis/CodeAnalysisStatusView';
-import type { CodeIssue, CodeAnalysisResult } from '@/types/code-analysis';
+import VersionHeader from '@/components/version/VersionHeader';
+import CodeAnalysisViewer from '@/components/code-analysis/CodeAnalysisViewer';
 
 export default function CodeAnalysisPage() {
-  const router = useRouter();
-  const { projectId, versionId } = router.query;
-
-  const [versionName, setVersionName] = useState('');
-  const [projectName, setProjectName] = useState('');
-  const [ownerName, setOwnerName] = useState('');
-  const [issues, setIssues] = useState<CodeIssue[]>([]);
-  const [hasIssue, setHasIssue] = useState(false);
-  const [status, setStatus] = useState<'success' | 'fail'>('success');
-  const [errorLog, setErrorLog] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!projectId || !versionId) return;
-
-    const redirectToProject = () => {
-      router.replace(`/project/${projectId}`);
-    };
-
-    const fetchData = async () => {
-      try {
-        const versionRes = await fetch(`/api/versions/${versionId}`);
-        const versionData = await versionRes.json();
-
-        setVersionName(versionData.name);
-        setProjectName(versionData.project.name);
-        setOwnerName(versionData.project.owner.name);
-
-        if (
-          versionData.codeStatus === 'pending' ||
-          versionData.codeStatus === 'none'
-        ) {
-          redirectToProject();
-          return;
-        }
-
-        const analysisRes = await fetch(
-          `/api/versions/${versionId}/code-analysis`
-        );
-        const analysisData: CodeAnalysisResult = await analysisRes.json();
-
-        if (
-          analysisData.status === 'success' ||
-          analysisData.status === 'fail'
-        ) {
-          setStatus(analysisData.status);
-        }
-
-        setHasIssue(analysisData.hasIssue ?? false);
-        setIssues(analysisData.issues ?? []);
-        setErrorLog(analysisData.errorLog ?? null);
-      } catch (error) {
-        console.error('데이터 불러오기 실패:', error);
-      }
-    };
-
-    fetchData();
-  }, [projectId, versionId, router]);
-
-  const handleIssueClick = (issue: CodeIssue) => {
-    router.push(
-      `/project/${projectId}/versions/${versionId}/code-analysis/${issue.id}`
-    );
-  };
+  const loading = false as const;
 
   return (
     <>
       <Head>
-        <title>{`${projectName} - 정적 분석`}</title>
+        <title>정적 분석 테스트</title>
       </Head>
 
-      <div className="bg-[#0d1117] min-h-screen px-4 sm:px-6 py-8 max-w-7xl mx-auto">
-        <ProjectHeader
-          projectName={`${projectName} / v${versionName}`}
-          creatorName={ownerName}
-        />
-        <CodeAnalysisStatusView
-          status={status}
-          hasIssue={hasIssue}
-          errorLog={errorLog}
-          issues={issues}
-          onIssueClick={handleIssueClick}
-        />
+      <div className="bg-[#0d1117] min-h-screen px-4 sm:px-6 py-8 max-w-7xl mx-auto text-white">
+        <VersionHeader />
+
+        <h1 className="text-xl font-bold mb-4">정적 분석 결과 테스트 페이지</h1>
+        <p className="text-sm text-gray-400 mb-8">
+          이 페이지는 현재 정적 분석 결과 뷰어를 테스트하기 위한 임시
+          화면입니다.
+        </p>
+
+        {loading && <p>로딩 중...</p>}
+
+        {!loading && <CodeAnalysisViewer />}
+
+        {/* 필요 시 빈 뷰도 테스트 가능 */}
+        {/* {!loading && <CodeAnalysisEmptyView />} */}
       </div>
     </>
   );

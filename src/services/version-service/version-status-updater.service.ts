@@ -28,6 +28,16 @@ export async function updateVersionStatusSafely(
 
     if (!current) throw new Error('Version not found');
 
+    // codeStatus와 imageStatus가 모두 success이고, approveStatus가 아직 none일 경우만 갱신
+    const shouldUpdateApprove =
+      current.approveStatus === 'none' &&
+      (update.codeStatus ?? current.codeStatus) === 'success' &&
+      (update.imageStatus ?? current.imageStatus) === 'success';
+
+    const nextApproveStatus = shouldUpdateApprove
+      ? 'pending'
+      : (update.approveStatus ?? current.approveStatus);
+
     const result = await prisma.version.updateMany({
       where: {
         id: versionId,
@@ -38,12 +48,13 @@ export async function updateVersionStatusSafely(
         buildStatus: update.buildStatus ?? current.buildStatus,
         imageStatus: update.imageStatus ?? current.imageStatus,
         deployStatus: update.deployStatus ?? current.deployStatus,
-        approveStatus: update.approveStatus ?? current.approveStatus,
+        approveStatus: nextApproveStatus,
         flowStatus: update.flowStatus ?? current.flowStatus,
       },
     });
 
     if (result.count > 0) return;
   }
+
   throw new Error('동시 업데이트 충돌 발생 — 재시도 2회 실패');
 }
