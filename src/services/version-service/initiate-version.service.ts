@@ -130,7 +130,6 @@ export async function initiateVersionInsideTx(
     imageTag: 'pending-build',
     branch,
     commitHash: targetCommitSha,
-    applicationName: project.name,
     project: { connect: { id: project.id } },
     author: { connect: { id: project.ownerId || 1 } },
     helmValues: { connect: { id: createdHelmValues.id } },

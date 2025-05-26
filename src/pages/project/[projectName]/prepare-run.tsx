@@ -3,7 +3,6 @@ import { useRouter } from 'next/router';
 
 interface FormData {
   newBranchName: string;
-  applicationName: string;
   dockerfilePath: string;
   helmReplicaCount: string;
   containerPort: string;
@@ -13,7 +12,6 @@ interface FormData {
 
 interface FormErrors {
   newBranchName?: string;
-  applicationName?: string;
   dockerfilePath?: string;
   helmReplicaCount?: string;
   containerPort?: string;
@@ -28,7 +26,6 @@ const PrepareRunPage: React.FC = () => {
 
   const [formData, setFormData] = useState<FormData>({
     newBranchName: 'main',
-    applicationName: '',
     dockerfilePath: './Dockerfile',
     helmReplicaCount: '1',
     containerPort: '8080',
@@ -44,7 +41,6 @@ const PrepareRunPage: React.FC = () => {
     if (router.isReady && projectName) {
       setFormData((prev) => ({
         ...prev,
-        applicationName: projectName,
       }));
     }
   }, [router.isReady, projectName]);
