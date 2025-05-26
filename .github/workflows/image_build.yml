@@ -27,32 +27,29 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3 # 멀티플랫폼 빌드를 위한 Buildx 환경 구성
 
-      # 2-1. AWS 로그인
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      # 2-1. Docker Hub 로그인 (AWS 로그인 대신 Docker Hub 로그인 추가)
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      # 3. 이미지 빌드 및 ECR 푸시
-      - name: Build and Push Docker image to ECR
+      # 3. 이미지 빌드 및 Docker Hub 푸시 (ECR 관련 부분 변경)
+      - name: Build and Push Docker image to Docker Hub
         id: build-push
         run: |
           cd target-repo
-          # GitHub Actions의 input.repo는 그대로 사용 (코드 클론용)
-          # 하지만 ECR에 푸시할 레포지토리 이름은 'intellisia/ecr'로 고정
-          ECR_REPOSITORY_NAME="intellisia/ecr"
-          IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY_NAME:${{ github.event.inputs.versionName }}"
+          # Docker Hub 레포지토리 이름은 DOCKERHUB_USERNAME/my-app 형식을 따름
+          DOCKERHUB_REPOSITORY_NAME="${{ secrets.DOCKERHUB_USERNAME }}/my-app" # [변경] ECR 대신 Docker Hub 레포지토리 이름 사용
+          IMAGE_URI="$DOCKERHUB_REPOSITORY_NAME:${{ github.event.inputs.versionName }}" # [변경] ECR 레지스트리 정보 대신 Docker Hub 이미지 URI 사용
           
           # Docker 이미지 빌드
           if docker build -t "$IMAGE_URI" .; then
-            # ECR에 푸시
+            # Docker Hub에 푸시
             if docker push "$IMAGE_URI"; then
+              # [변경] latest 태그도 함께 푸시
+              docker tag "$IMAGE_URI" "$DOCKERHUB_REPOSITORY_NAME:latest"
+              docker push "$DOCKERHUB_REPOSITORY_NAME:latest"
               echo "status=success" >> $GITHUB_OUTPUT
             else
               echo "status=fail" >> $GITHUB_OUTPUT
