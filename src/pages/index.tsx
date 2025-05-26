@@ -15,7 +15,6 @@ export default function Home() {
 }
 
 
-
 // // NextAuth에서 제공하는 클라이언트 훅과 함수 불러오기
 // // - useSession: 현재 로그인 세션 조회
 // // - signIn: 로그인 시작 (GitHub OAuth 요청)
