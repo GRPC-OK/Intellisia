@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
       orderBy: { createdAt: 'desc' },
       select: {
-        name: true,           
+        name: true,
         imageTag: true,
         buildStatus: true,
       },
