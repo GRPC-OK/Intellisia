@@ -1,5 +1,3 @@
-// src/pages/create-project.tsx
-
 import React, { useState, ChangeEvent, FormEvent, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 
@@ -9,7 +7,7 @@ import { useRouter } from 'next/router';
  * 중요: 새로운 요구사항에 따라 'intellisia.site'로 변경되었습니다.
  * 예: 'my-app.intellisia.site' 형태로 사용됩니다.
  */
-const BASE_DOMAIN = 'intellisia.site'; 
+const BASE_DOMAIN = 'intellisia.site';
 
 /**
  * 프로젝트 생성 성공 후 프로젝트 페이지로 리디렉션하기 전 대기 시간 (밀리초 단위)
@@ -26,8 +24,8 @@ interface FormData {
   description: string; // 프로젝트에 대한 설명
   githubUrl: string; // 프로젝트의 GitHub 저장소 URL
   derivedDomain: string; // 프로젝트 이름을 기반으로 자동 생성되는 전체 도메인 (UI 표시용)
-  helmReplicaCount: string; // Helm 차트의 레플리카 수 (문자열로 입력받음)
-  containerPort: string; // 컨테이너가 리스닝하는 포트 (문자열로 입력받음)
+  // helmReplicaCount: string; // 삭제됨
+  // containerPort: string; // 삭제됨
 }
 
 /**
@@ -37,8 +35,8 @@ interface FormErrors {
   projectName?: string;
   description?: string;
   githubUrl?: string;
-  helmReplicaCount?: string;
-  containerPort?: string;
+  // helmReplicaCount?: string; // 삭제됨
+  // containerPort?: string; // 삭제됨
   apiError?: string; // API 호출 관련 에러 메시지
 }
 
@@ -70,8 +68,8 @@ const ProjectCreationForm: React.FC = () => {
     description: '',
     githubUrl: '',
     derivedDomain: `.${BASE_DOMAIN}`, // 초기값은 변경된 BASE_DOMAIN을 사용
-    helmReplicaCount: '1',
-    containerPort: '8080',
+    // helmReplicaCount: '1', // 삭제됨
+    // containerPort: '8080', // 삭제됨
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -143,18 +141,19 @@ const ProjectCreationForm: React.FC = () => {
       }
     }
 
-    const replicaCount = parseInt(formData.helmReplicaCount, 10);
-    if (isNaN(replicaCount) || replicaCount < 0) {
-      newErrors.helmReplicaCount = '레플리카 수는 0 이상의 정수여야 합니다.';
-      isValid = false;
-    }
+    // 레플리카 수 및 포트 유효성 검사 삭제됨
+    // const replicaCount = parseInt(formData.helmReplicaCount, 10);
+    // if (isNaN(replicaCount) || replicaCount < 0) {
+    //   newErrors.helmReplicaCount = '레플리카 수는 0 이상의 정수여야 합니다.';
+    //   isValid = false;
+    // }
 
-    const port = parseInt(formData.containerPort, 10);
-    if (isNaN(port) || port <= 0 || port > 65535) {
-      newErrors.containerPort =
-        '유효한 포트 번호(1-65535)를 입력해주세요.';
-      isValid = false;
-    }
+    // const port = parseInt(formData.containerPort, 10);
+    // if (isNaN(port) || port <= 0 || port > 65535) {
+    //   newErrors.containerPort =
+    //     '유효한 포트 번호(1-65535)를 입력해주세요.';
+    //   isValid = false;
+    // }
 
     setErrors(newErrors);
     return isValid;
@@ -185,10 +184,12 @@ const ProjectCreationForm: React.FC = () => {
       description: formData.description,
       githubUrl: formData.githubUrl,
       derivedDomain: slugForApi,
-      defaultHelmValues: {
-        replicaCount: parseInt(formData.helmReplicaCount, 10),
-        containerPort: parseInt(formData.containerPort, 10),
-      },
+      // defaultHelmValues는 이제 백엔드에서 기본값을 처리하거나,
+      // 이 폼에서 제거되었으므로 전송하지 않습니다.
+      // defaultHelmValues: {
+      //   replicaCount: parseInt(formData.helmReplicaCount, 10),
+      //   containerPort: parseInt(formData.containerPort, 10),
+      // },
     };
 
     try {
@@ -207,7 +208,7 @@ const ProjectCreationForm: React.FC = () => {
       if (!response.ok) {
         const errorMessage = responseData.message || `Error ${response.status}: ${response.statusText}`;
         const fieldErrors = responseData.errors;
-        
+
         let finalApiError = errorMessage;
         if (fieldErrors && typeof fieldErrors === 'object') {
             const detailedErrorMessages = Object.entries(fieldErrors)
@@ -231,8 +232,8 @@ const ProjectCreationForm: React.FC = () => {
         description: '',
         githubUrl: '',
         derivedDomain: `.${BASE_DOMAIN}`,
-        helmReplicaCount: '1',
-        containerPort: '8080',
+        // helmReplicaCount: '1', // 삭제됨
+        // containerPort: '8080', // 삭제됨
       });
       setErrors({});
       setIsLoading(false);
@@ -247,7 +248,7 @@ const ProjectCreationForm: React.FC = () => {
       if (error instanceof Error) {
         errorMessage = error.message;
       }
-      if (!errors.apiError) { 
+      if (!errors.apiError) {
         setErrors(prevErrors => ({ ...prevErrors, apiError: errorMessage }));
       }
       setIsLoading(false);
@@ -396,7 +397,8 @@ const ProjectCreationForm: React.FC = () => {
             </div>
           </fieldset>
 
-          <fieldset className="space-y-6 pt-6 border-t border-[#30363d]">
+          {/* 초기 실행 설정 필드셋이 통째로 삭제됨 */}
+          {/* <fieldset className="space-y-6 pt-6 border-t border-[#30363d]">
             <legend className="text-lg font-semibold text-gray-300 mb-3">
               초기 실행 설정
             </legend>
@@ -459,7 +461,7 @@ const ProjectCreationForm: React.FC = () => {
                 </p>
               )}
             </div>
-          </fieldset>
+          </fieldset> */}
 
           <div className="pt-6">
             <button
