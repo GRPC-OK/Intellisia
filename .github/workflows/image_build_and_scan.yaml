@@ -1,0 +1,140 @@
+name: Run Image Build and Scan
+
+on:
+  workflow_dispatch:
+    inputs:
+      versionName:
+        required: true
+      repo:
+        required: true
+      ref:
+        required: true
+        
+jobs:
+  image-build-and-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 레포지토리 클론
+      - name: Clone target repository
+        env:
+          GH_TOKEN: ${{ secrets.PLATFORM_GITHUB_TOKEN }}
+        run: |
+          git clone --branch ${{ github.event.inputs.ref }} \
+            https://$GH_TOKEN@github.com/${{ github.event.inputs.repo }} target-repo
+      # 2. Docker Buildx 셋업
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 3. 이미지 빌드 (로컬에서 스캔을 위해 바로 태그 지정)
+      - name: Build Docker image
+        id: build-local # [변경] ID 변경, 푸시 단계와 분리
+        run: |
+          cd target-repo
+          # [변경] 로컬에서 스캔할 이미지 태그를 정의
+          LOCAL_IMAGE_TAG="local-my-app:${{ github.event.inputs.versionName }}" 
+          
+          if docker build -t "$LOCAL_IMAGE_TAG" .; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "local_image_tag=$LOCAL_IMAGE_TAG" >> $GITHUB_OUTPUT # [변경] 로컬 이미지 태그 출력
+          else
+            echo "status=fail" >> $GITHUB_OUTPUT
+          fi
+          
+      # 4. Trivy 취약점 스캔 (SARIF 형식으로 바로 출력)
+      - name: Run Trivy vulnerability scan and generate SARIF
+        if: success() && steps.build-local.outputs.status == 'success'
+        id: trivy_scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.build-local.outputs.local_image_tag }}
+          format: 'sarif' # [변경] 출력 형식을 'sarif'로 직접 지정
+          output: 'trivy-results.sarif' # [변경] 출력 파일명도 .sarif로 변경
+          # severity: 'CRITICAL,HIGH' # 이 워크플로우에서는 모든 심각도를 success로 처리할 예정이므로 주석 처리 또는 제거 권장
+
+      # [변경] JSON to SARIF 변환 스텝 제거 - 이제 Trivy가 바로 SARIF를 생성
+      # - name: Convert Trivy JSON to SARIF and Upload to Code Scanning (이 스텝은 더 이상 필요 없음)
+      #   ...
+
+      # 5. Docker Hub 로그인 (스캔 후 푸시)
+      - name: Login to Docker Hub
+        if: success() && steps.build-local.outputs.status == 'success' # [변경] 빌드 성공 시에만 로그인
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      # 6. Docker Hub에 이미지 푸시 (스캔 후에 푸시)
+      - name: Push Docker image to Docker Hub
+        if: success() && steps.trivy_scan.outcome == 'success' # [변경] 스캔까지 성공했을 때만 푸시 (필요시 'always()'로 변경)
+        id: push-to-hub # [변경] ID 변경
+        run: |
+          # [변경] 로컬 이미지 태그를 가져와서 Docker Hub에 푸시
+          LOCAL_IMAGE_TAG="${{ steps.build-local.outputs.local_image_tag }}"
+          DOCKERHUB_REPOSITORY_NAME="${{ secrets.DOCKERHUB_USERNAME }}/my-app"
+          DOCKERHUB_IMAGE_URI="$DOCKERHUB_REPOSITORY_NAME:${{ github.event.inputs.versionName }}"
+          
+          # 로컬 이미지 태그를 Docker Hub URI로 태그 지정
+          docker tag "$LOCAL_IMAGE_TAG" "$DOCKERHUB_IMAGE_URI"
+          
+          if docker push "$DOCKERHUB_IMAGE_URI"; then
+            # latest 태그도 함께 푸시
+            docker tag "$DOCKERHUB_IMAGE_URI" "$DOCKERHUB_REPOSITORY_NAME:latest"
+            docker push "$DOCKERHUB_REPOSITORY_NAME:latest"
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=fail" >> $GITHUB_OUTPUT
+          fi
+
+      # 7. 빌드 결과를 백엔드로 전송 (하드코딩된 URL 사용)
+      - name: Upload Build Result to Backend
+        # [변경] 푸시 성공 여부와 상관없이 빌드 자체 결과만 보고
+        if: always() # 빌드 스텝 결과에 따라 항상 알림
+        run: |
+          CALLBACK_URL="http://3.35.153.146/api/image-build/callback_build" 
+          if [ "${{ steps.build-local.outputs.status }}" = "success" ]; then # [변경] build-local 스텝의 상태 사용
+            curl -X POST "$CALLBACK_URL?versionName=${{ github.event.inputs.versionName }}&status=success"
+          else
+            curl -X POST "$CALLBACK_URL?versionName=${{ github.event.inputs.versionName }}&status=fail"
+          fi
+      
+      # 8. AWS Credentials 설정 (S3 업로드용)
+      - name: Configure AWS Credentials
+        if: always()
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      # 9. Trivy 스캔 결과 S3 업로드 및 백엔드 알림
+      - name: Upload Trivy Results to S3 and Notify Backend
+        if: always()
+        run: |
+          BUCKET="${{ secrets.S3_BUCKET_NAME }}"
+          REGION="${{ secrets.AWS_REGION }}"
+          IMAGE_ANALYSIS_CALLBACK_URL="http://3.35.153.146/api/image-analysis/callback_analysis"
+
+          SCAN_STATUS="fail"
+          TRIVY_FILE="trivy-results.json"
+          TARGET_PATH="image-analysis/version-${{ github.event.inputs.versionName }}/$TRIVY_FILE" # 변경
+          PUBLIC_URL=""
+
+          if [ -f "$TRIVY_FILE" ]; then
+            aws s3 cp "$TRIVY_FILE" "s3://$BUCKET/$TARGET_PATH" --acl public-read
+            PUBLIC_URL="<https://$BUCKET.s3.$REGION.amazonaws.com/$TARGET_PATH>"
+            echo "Uploaded Trivy report: $PUBLIC_URL"
+
+            # 모든 심각도에 상관없이 항상 success로 간주
+            SCAN_STATUS="success" # [변경] 조건문을 제거하고 항상 success로 설정
+          else
+            echo "Trivy results file not found, assuming scan failure."
+            SCAN_STATUS="fail" # 파일 자체가 없으면 실패로 유지
+          fi
+
+              curl -X POST "$IMAGE_ANALYSIS_CALLBACK_URL" \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "status": "'$SCAN_STATUS'",
+                  "fileUrl": "'$PUBLIC_URL'" # S3버킷 URL
+                }'
