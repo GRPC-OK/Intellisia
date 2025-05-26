@@ -116,8 +116,8 @@ jobs:
           IMAGE_ANALYSIS_CALLBACK_URL="http://3.35.153.146/api/image-analysis/callback_analysis"
 
           SCAN_STATUS="fail"
-          TRIVY_FILE="trivy-results.json"
-          TARGET_PATH="image-analysis/version-${{ github.event.inputs.versionName }}/$TRIVY_FILE" # 변경
+          TRIVY_FILE="trivy-results.sarif"
+          TARGET_PATH="image-analysis/version-${{ github.event.inputs.versionName }}/$TRIVY_FILE"
           PUBLIC_URL=""
 
           if [ -f "$TRIVY_FILE" ]; then
