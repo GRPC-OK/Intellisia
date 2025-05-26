@@ -28,9 +28,9 @@ interface HelmValueOverrides {
   [key: string]: unknown;
 }
 
+// applicationName 필드를 제거합니다.
 interface RequestBody {
   branch: string;
-  applicationName: string;
   dockerfilePath: string;
   helmValueOverrides?: HelmValueOverrides;
 }
@@ -106,15 +106,15 @@ export default async function handler(
 
     const {
       branch: requestedBranchName,
-      applicationName,
+      // applicationName, // 여기서 applicationName을 제거합니다.
       dockerfilePath,
       helmValueOverrides,
-    }: RequestBody = req.body as RequestBody;
+    }: RequestBody = req.body as RequestBody; // RequestBody 타입에서 applicationName이 제거되었으므로 문제 없음
 
-    if (!requestedBranchName || !applicationName || !dockerfilePath) {
+    // applicationName 검증 로직도 제거합니다.
+    if (!requestedBranchName || !dockerfilePath) {
       return res.status(400).json({
-        message:
-          '필수 입력값이 누락되었습니다 (branch, applicationName, dockerfilePath).',
+        message: '필수 입력값이 누락되었습니다 (branch, dockerfilePath).',
       });
     }
 
@@ -127,11 +127,13 @@ export default async function handler(
         .status(404)
         .json({ message: `프로젝트 '${projectName}'를 찾을 수 없습니다.` });
     }
-    if (applicationName !== project.name) {
-      return res.status(400).json({
-        message: '애플리케이션 이름이 프로젝트 이름과 일치하지 않습니다.',
-      });
-    }
+
+    // applicationName이 프로젝트 이름과 일치하는지 확인하는 로직도 제거합니다.
+    // if (applicationName !== project.name) {
+    //   return res.status(400).json({
+    //     message: '애플리케이션 이름이 프로젝트 이름과 일치하지 않습니다.',
+    //   });
+    // }
 
     const targetCommitSha = 'simulated-commit-sha-1234567';
     console.log(
@@ -210,7 +212,7 @@ export default async function handler(
           imageTag: 'pending-build',
           branch: requestedBranchName,
           commitHash: targetCommitSha,
-          applicationName: applicationName,
+          // applicationName 필드를 제거합니다.
           codeStatus: StepStatus.pending,
           buildStatus: StepStatus.none,
           imageStatus: StepStatus.none,
