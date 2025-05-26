@@ -1,18 +1,38 @@
-// src/pages/create-project.tsx 수정
+// src/pages/create-project.tsx
 
-import React, { useState, ChangeEvent, FormEvent, useEffect } from 'react';
+import React, { useState, ChangeEvent, FormEvent, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/router';
 
-// 폼 입력 값들의 타입을 정의합니다.
+// --- 상수 정의 ---
+/**
+ * 프로젝트가 생성될 기본 도메인입니다.
+ * 중요: 새로운 요구사항에 따라 'intellisia.site'로 변경되었습니다.
+ * 예: 'my-app.intellisia.site' 형태로 사용됩니다.
+ */
+const BASE_DOMAIN = 'intellisia.site'; 
+
+/**
+ * 프로젝트 생성 성공 후 프로젝트 페이지로 리디렉션하기 전 대기 시간 (밀리초 단위)
+ */
+const REDIRECT_DELAY_MS = 2000;
+
+// --- 타입 정의 ---
+
+/**
+ * 폼 입력 값들의 타입을 정의합니다.
+ */
 interface FormData {
-  projectName: string;
-  description: string;
-  githubUrl: string;
-  derivedDomain: string; // UI 표시용 전체 도메인 (예: my-app.intellisia.app)
-  helmReplicaCount: string;
-  containerPort: string;
+  projectName: string; // 사용자가 입력하는 프로젝트 이름
+  description: string; // 프로젝트에 대한 설명
+  githubUrl: string; // 프로젝트의 GitHub 저장소 URL
+  derivedDomain: string; // 프로젝트 이름을 기반으로 자동 생성되는 전체 도메인 (UI 표시용)
+  helmReplicaCount: string; // Helm 차트의 레플리카 수 (문자열로 입력받음)
+  containerPort: string; // 컨테이너가 리스닝하는 포트 (문자열로 입력받음)
 }
 
-// 폼 필드별 에러 메시지 타입을 정의합니다.
+/**
+ * 폼 필드별 에러 메시지 및 API 에러 메시지 타입을 정의합니다.
+ */
 interface FormErrors {
   projectName?: string;
   description?: string;
@@ -22,25 +42,34 @@ interface FormErrors {
   apiError?: string; // API 호출 관련 에러 메시지
 }
 
-// 프로젝트 이름을 URL 친화적인 슬러그로 변환하는 함수 (예시 구현)
+// --- 유틸리티 함수 ---
+
+/**
+ * 프로젝트 이름을 URL 친화적인 슬러그(slug) 형태로 변환합니다.
+ * @param name 변환할 프로젝트 이름 문자열
+ * @returns URL 슬러그 형태의 문자열
+ */
 const slugifyProjectName = (name: string): string => {
   if (!name) return '';
   return name
-    .toLowerCase() // 소문자로
+    .toLowerCase() // 소문자로 변환
     .trim() // 양쪽 공백 제거
-    .replace(/\s+/g, '-') // 공백을 하이픈으로
-    .replace(/[^\w-]+/g, '') // 영숫자, 밑줄, 하이픈 외 문자 제거
-    .replace(/--+/g, '-'); // 연속된 하이픈을 하나로
+    .replace(/\s+/g, '-') // 공백 문자를 하이픈(-)으로 대체
+    .replace(/[^\w-]+/g, '') // 영숫자, 밑줄(_), 하이픈(-) 외의 모든 문자 제거
+    .replace(/--+/g, '-'); // 연속된 하이픈을 하나로 축약
 };
 
-const ProjectCreationForm: React.FC = () => {
-  const BASE_DOMAIN = 'intellisia.app'; // 실제 사용하는 기본 도메인으로 변경하세요.
+// --- React 컴포넌트 ---
 
+const ProjectCreationForm: React.FC = () => {
+  const router = useRouter();
+
+  // --- 상태 관리 (State) ---
   const [formData, setFormData] = useState<FormData>({
     projectName: '',
     description: '',
     githubUrl: '',
-    derivedDomain: `.${BASE_DOMAIN}`, // 초기값
+    derivedDomain: `.${BASE_DOMAIN}`, // 초기값은 변경된 BASE_DOMAIN을 사용
     helmReplicaCount: '1',
     containerPort: '8080',
   });
@@ -49,38 +78,41 @@ const ProjectCreationForm: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
 
+  // --- 효과 (Effects) ---
   useEffect(() => {
     const slug = slugifyProjectName(formData.projectName);
     setFormData(prevData => ({
       ...prevData,
+      // derivedDomain은 UI 표시용으로, 변경된 BASE_DOMAIN을 사용합니다.
       derivedDomain: slug ? `${slug}.${BASE_DOMAIN}` : `.${BASE_DOMAIN}`,
     }));
-  }, [formData.projectName, BASE_DOMAIN]);
+  }, [formData.projectName]);
 
-  const handleChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData(prevData => ({
-      ...prevData,
-      [name]: value,
-    }));
 
-    // 입력 변경 시 해당 필드 에러 및 API 에러 초기화
-    if (errors[name as keyof FormErrors]) {
-      setErrors(prevErrors => ({ ...prevErrors, [name]: undefined }));
-    }
-    if (errors.apiError) {
-      setErrors(prevErrors => ({ ...prevErrors, apiError: undefined }));
-    }
-    setSuccessMessage(''); // 성공 메시지도 초기화
-  };
+  // --- 이벤트 핸들러 및 유효성 검사 ---
+  const handleChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+      const { name, value } = e.target;
+      setFormData(prevData => ({
+        ...prevData,
+        [name]: value,
+      }));
+
+      if (errors[name as keyof FormErrors]) {
+        setErrors(prevErrors => ({ ...prevErrors, [name]: undefined }));
+      }
+      if (errors.apiError) {
+        setErrors(prevErrors => ({ ...prevErrors, apiError: undefined }));
+      }
+      setSuccessMessage('');
+    },
+    [errors]
+  );
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
     let isValid = true;
 
-    // 프로젝트 이름 유효성 검사
     if (!formData.projectName.trim()) {
       newErrors.projectName = '프로젝트 이름은 필수입니다.';
       isValid = false;
@@ -90,7 +122,6 @@ const ProjectCreationForm: React.FC = () => {
       isValid = false;
     }
 
-    // GitHub URL 유효성 검사
     if (!formData.githubUrl.trim()) {
       newErrors.githubUrl = 'GitHub 저장소 주소는 필수입니다.';
       isValid = false;
@@ -112,14 +143,12 @@ const ProjectCreationForm: React.FC = () => {
       }
     }
 
-    // Helm 값 유효성 검사 (레플리카 수)
     const replicaCount = parseInt(formData.helmReplicaCount, 10);
     if (isNaN(replicaCount) || replicaCount < 0) {
-      newErrors.helmReplicaCount = '레플리카 수는 0 이상의 숫자여야 합니다.';
+      newErrors.helmReplicaCount = '레플리카 수는 0 이상의 정수여야 합니다.';
       isValid = false;
     }
 
-    // Helm 값 유효성 검사 (컨테이너 포트)
     const port = parseInt(formData.containerPort, 10);
     if (isNaN(port) || port <= 0 || port > 65535) {
       newErrors.containerPort =
@@ -139,38 +168,36 @@ const ProjectCreationForm: React.FC = () => {
     if (!validateForm()) {
       return;
     }
+
     setIsLoading(true);
 
-    try {
-      const defaultHelmValues = {
+    const slugForApi = slugifyProjectName(formData.projectName);
+    if (!slugForApi) {
+      setErrors(prevErrors => ({ ...prevErrors, projectName: '유효한 프로젝트 이름으로 도메인을 생성할 수 없습니다.' }));
+      setIsLoading(false);
+      return;
+    }
+
+    // 백엔드로 전송되는 payload의 derivedDomain은 순수 slug 값 (예: 'sasa') 입니다.
+    // 백엔드에서 이 slug에 '.intellisia.site'를 붙여 전체 도메인을 구성합니다.
+    const payload = {
+      projectName: formData.projectName,
+      description: formData.description,
+      githubUrl: formData.githubUrl,
+      derivedDomain: slugForApi,
+      defaultHelmValues: {
         replicaCount: parseInt(formData.helmReplicaCount, 10),
         containerPort: parseInt(formData.containerPort, 10),
-      };
+      },
+    };
 
-      // 백엔드로 전송할 derivedDomain은 순수 slug 값이어야 합니다.
-      const slugForApi = slugifyProjectName(formData.projectName);
-      if (!slugForApi) { // 혹시 모를 경우 방어
-        setErrors(prevErrors => ({ ...prevErrors, projectName: '유효한 프로젝트 이름으로 도메인을 생성할 수 없습니다.'}));
-        setIsLoading(false);
-        return;
-      }
-
-
-      const payload = {
-        projectName: formData.projectName,
-        description: formData.description,
-        githubUrl: formData.githubUrl,
-        derivedDomain: slugForApi, // BASE_DOMAIN을 제외한 순수 slug 값
-        defaultHelmValues: defaultHelmValues,
-      };
+    try {
       console.log('서버로 전송할 데이터:', payload);
 
       const response = await fetch('/api/project/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // TODO: 실제 인증 토큰이 있다면 헤더에 추가
-          // 'Authorization': `Bearer ${yourAuthToken}`,
         },
         body: JSON.stringify(payload),
       });
@@ -179,7 +206,7 @@ const ProjectCreationForm: React.FC = () => {
 
       if (!response.ok) {
         const errorMessage = responseData.message || `Error ${response.status}: ${response.statusText}`;
-        const fieldErrors = responseData.errors; // 백엔드 Zod 에러 상세
+        const fieldErrors = responseData.errors;
         
         let finalApiError = errorMessage;
         if (fieldErrors && typeof fieldErrors === 'object') {
@@ -191,13 +218,14 @@ const ProjectCreationForm: React.FC = () => {
             }
         }
         setErrors(prevErrors => ({ ...prevErrors, apiError: finalApiError }));
-        // throw new Error(finalApiError); // 에러를 발생시켜 catch 블록으로 이동시킬 수도 있으나, 여기서는 상태로 관리
-        setIsLoading(false); // 로딩 상태 해제
-        return; // 핸들러 종료
+        setIsLoading(false);
+        return;
       }
 
-      setSuccessMessage(responseData.message || `프로젝트 '${payload.projectName}' 생성 요청이 성공적으로 완료되었습니다!`);
-      
+      setSuccessMessage(
+        responseData.message ||
+        `프로젝트 '${payload.projectName}' 생성 요청 성공! 잠시 후 프로젝트 페이지로 이동합니다.`
+      );
       setFormData({
         projectName: '',
         description: '',
@@ -206,17 +234,22 @@ const ProjectCreationForm: React.FC = () => {
         helmReplicaCount: '1',
         containerPort: '8080',
       });
-      setErrors({}); // 이전 에러 상태 초기화
+      setErrors({});
+      setIsLoading(false);
+
+      setTimeout(() => {
+        router.push(`/project/${slugForApi}`);
+      }, REDIRECT_DELAY_MS);
+
     } catch (error: unknown) {
       console.error('API 호출 또는 처리 중 에러:', error);
-      if (!errors.apiError) {
-        let errorMessage = '프로젝트 생성 중 알 수 없는 에러가 발생했습니다.';
-        if (error instanceof Error) {
-          errorMessage = error.message;
-        }
+      let errorMessage = '프로젝트 생성 중 알 수 없는 에러가 발생했습니다.';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      if (!errors.apiError) { 
         setErrors(prevErrors => ({ ...prevErrors, apiError: errorMessage }));
       }
-    } finally {
       setIsLoading(false);
     }
   };
@@ -231,6 +264,7 @@ const ProjectCreationForm: React.FC = () => {
             viewBox="0 0 24 24"
             strokeWidth="1.5"
             stroke="currentColor"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
@@ -244,12 +278,13 @@ const ProjectCreationForm: React.FC = () => {
         </div>
 
         {errors.apiError && (
-          <div className="mb-6 p-3 bg-red-500 bg-opacity-20 border border-red-500 text-red-300 rounded-md text-sm">
+          <div className="mb-6 p-3 bg-red-500 bg-opacity-20 border border-red-500 text-red-300 rounded-md text-sm" role="alert">
             {errors.apiError}
           </div>
         )}
+
         {successMessage && (
-          <div className="mb-6 p-4 bg-green-500 bg-opacity-10 border border-green-500 border-opacity-30 text-green-300 rounded-md text-sm">
+          <div className="mb-6 p-4 bg-green-500 bg-opacity-10 border border-green-500 border-opacity-30 text-green-300 rounded-md text-sm" role="status">
             {successMessage}
           </div>
         )}
@@ -259,7 +294,7 @@ const ProjectCreationForm: React.FC = () => {
             <legend className="text-lg font-semibold text-gray-300 mb-3">
               프로젝트 정보
             </legend>
-            {/* 프로젝트 이름 */}
+
             <div>
               <label
                 htmlFor="projectName"
@@ -277,15 +312,16 @@ const ProjectCreationForm: React.FC = () => {
                   errors.projectName ? 'border-red-600' : 'border-[#30363d]'
                 } rounded-md focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500 text-gray-200`}
                 placeholder="예: My Awesome App"
+                aria-required="true"
+                aria-describedby={errors.projectName ? "projectName-error" : undefined}
               />
               {errors.projectName && (
-                <p className="mt-1 text-xs text-red-400">
+                <p id="projectName-error" className="mt-1 text-xs text-red-400" role="alert">
                   {errors.projectName}
                 </p>
               )}
             </div>
 
-            {/* 설명 */}
             <div>
               <label
                 htmlFor="description"
@@ -304,7 +340,6 @@ const ProjectCreationForm: React.FC = () => {
               />
             </div>
 
-            {/* GitHub 저장소 주소 */}
             <div>
               <label
                 htmlFor="githubUrl"
@@ -323,15 +358,16 @@ const ProjectCreationForm: React.FC = () => {
                   errors.githubUrl ? 'border-red-600' : 'border-[#30363d]'
                 } rounded-md focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500 text-gray-200`}
                 placeholder="예: https://github.com/OWNER/REPOSITORY_NAME.git"
+                aria-required="true"
+                aria-describedby={errors.githubUrl ? "githubUrl-error" : undefined}
               />
               {errors.githubUrl && (
-                <p className="mt-1 text-xs text-red-400">
+                <p id="githubUrl-error" className="mt-1 text-xs text-red-400" role="alert">
                   {errors.githubUrl}
                 </p>
               )}
             </div>
 
-            {/* 생성될 도메인 */}
             <div>
               <label
                 htmlFor="derivedDomain"
@@ -343,14 +379,16 @@ const ProjectCreationForm: React.FC = () => {
                 type="text"
                 name="derivedDomain"
                 id="derivedDomain"
-                value={formData.derivedDomain}
+                value={formData.derivedDomain} // 이 값은 'slug.intellisia.site' 형태로 표시됨
                 readOnly
                 className="w-full px-3 py-2 bg-[#0d1117] border border-[#30363d] rounded-md text-gray-400 cursor-not-allowed"
+                aria-label="생성될 도메인, 프로젝트 이름에 따라 자동으로 생성됩니다."
               />
               <p className="mt-1 text-xs text-gray-500">
                 전체 URL은{' '}
                 <code className="text-xs text-blue-400 bg-gray-700 px-1 py-0.5 rounded">
                   https://
+                  {/* formData.derivedDomain이 비어있으면 '[project-name].intellisia.site' 형태로 표시 */}
                   {formData.derivedDomain || `[project-name].${BASE_DOMAIN}`}
                 </code>{' '}
                 형식이 됩니다.
@@ -358,13 +396,11 @@ const ProjectCreationForm: React.FC = () => {
             </div>
           </fieldset>
 
-          {/* 초기 실행 설정 (최소 Helm 값) */}
           <fieldset className="space-y-6 pt-6 border-t border-[#30363d]">
             <legend className="text-lg font-semibold text-gray-300 mb-3">
               초기 실행 설정
             </legend>
 
-            {/* 레플리카 카운트 */}
             <div>
               <label
                 htmlFor="helmReplicaCount"
@@ -385,15 +421,16 @@ const ProjectCreationForm: React.FC = () => {
                     ? 'border-red-600'
                     : 'border-[#30363d]'
                 } rounded-md focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500 text-gray-200`}
+                aria-required="true"
+                aria-describedby={errors.helmReplicaCount ? "helmReplicaCount-error" : undefined}
               />
               {errors.helmReplicaCount && (
-                <p className="mt-1 text-xs text-red-400">
+                <p id="helmReplicaCount-error" className="mt-1 text-xs text-red-400" role="alert">
                   {errors.helmReplicaCount}
                 </p>
               )}
             </div>
 
-            {/* 애플리케이션 포트 번호 */}
             <div>
               <label
                 htmlFor="containerPort"
@@ -413,20 +450,21 @@ const ProjectCreationForm: React.FC = () => {
                   errors.containerPort ? 'border-red-600' : 'border-[#30363d]'
                 } rounded-md focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500 text-gray-200`}
                 placeholder="예: 8080 (애플리케이션이 리스닝하는 포트)"
+                aria-required="true"
+                aria-describedby={errors.containerPort ? "containerPort-error" : undefined}
               />
               {errors.containerPort && (
-                <p className="mt-1 text-xs text-red-400">
+                <p id="containerPort-error" className="mt-1 text-xs text-red-400" role="alert">
                   {errors.containerPort}
                 </p>
               )}
             </div>
           </fieldset>
 
-          {/* 제출 버튼 */}
           <div className="pt-6">
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !!successMessage}
               className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isLoading ? (
@@ -436,6 +474,7 @@ const ProjectCreationForm: React.FC = () => {
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
+                    aria-hidden="true"
                   >
                     <circle
                       className="opacity-25"
@@ -460,6 +499,7 @@ const ProjectCreationForm: React.FC = () => {
           </div>
         </form>
       </div>
+
       <footer className="mt-12 text-center text-sm text-gray-500">
         <p>&copy; {new Date().getFullYear()} Intellisia Developer Platform</p>
       </footer>
