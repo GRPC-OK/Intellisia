@@ -8,8 +8,8 @@ import { useRouter } from 'next/router';
 // 폼 입력 값 타입
 interface FormData {
   newBranchName: string;
-  applicationName: string; // 사용자가 입력하거나 URL의 projectName으로 고정
-  dockerfilePath: string;
+  // applicationName: string; // 삭제됨
+  // dockerfilePath: string; // 삭제됨
   helmReplicaCount: string;
   containerPort: string;
   cpuRequest: string;
@@ -19,8 +19,8 @@ interface FormData {
 // 폼 필드별 에러 메시지 타입
 interface FormErrors {
   newBranchName?: string;
-  applicationName?: string;
-  dockerfilePath?: string;
+  // applicationName?: string; // 삭제됨
+  // dockerfilePath?: string; // 삭제됨
   helmReplicaCount?: string;
   containerPort?: string;
   cpuRequest?: string;
@@ -40,9 +40,8 @@ const PrepareRunPage: React.FC = () => {
 
   const [formData, setFormData] = useState<FormData>({
     newBranchName: 'main', // 기본적인 일반 기본값
-    applicationName: '',   // useEffect에서 projectNameFromUrl로 채워짐
-
-    dockerfilePath: './Dockerfile',
+    // applicationName: '',   // useEffect에서 projectNameFromUrl로 채워짐 // 삭제됨
+    // dockerfilePath: './Dockerfile', // 삭제됨
     helmReplicaCount: '1',
     containerPort: '8080',
     cpuRequest: '100m',
@@ -54,26 +53,13 @@ const PrepareRunPage: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string>('');
 
   useEffect(() => {
-    if (router.isReady && projectNameFromUrl) {
-      // details API 호출 없이, applicationName만 URL의 projectName으로 설정
-      setFormData(prev => ({
-        ...prev,
-        applicationName: projectNameFromUrl,
-      }));
-
-    } else if (router.isReady && !projectNameFromUrl) {
-
+    if (router.isReady && !projectNameFromUrl) {
       setErrors(prev => ({ ...prev, apiError: `프로젝트 이름이 URL에 지정되지 않았습니다.` }));
     }
   }, [router.isReady, projectNameFromUrl]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    // applicationName 필드는 수정 불가하도록 할 수 있음
-    if (name === "applicationName" && formData.applicationName === projectNameFromUrl) {
-        // return; // 수정 못하게 하려면 여기서 막기 (단, 초기값 설정 후 사용자가 지우는것 방지)
-    }
-
     setFormData(prevData => ({ ...prevData, [name]: value }));
     setErrors(prevErrors => ({ ...prevErrors, [name]: undefined, apiError: undefined }));
     setSuccessMessage('');
@@ -83,9 +69,12 @@ const PrepareRunPage: React.FC = () => {
     const newErrors: FormErrors = {};
     if (!formData.newBranchName.trim()) newErrors.newBranchName = '브랜치 이름은 필수입니다.';
 
-    if (!formData.applicationName.trim()) newErrors.applicationName = '애플리케이션 이름은 필수입니다.';
+    // applicationName 유효성 검사 삭제됨
+    // if (!formData.applicationName.trim()) newErrors.applicationName = '애플리케이션 이름은 필수입니다.';
 
-    if (!formData.dockerfilePath.trim()) newErrors.dockerfilePath = 'Dockerfile 경로는 필수입니다.';
+    // dockerfilePath 유효성 검사 삭제됨
+    // if (!formData.dockerfilePath.trim()) newErrors.dockerfilePath = 'Dockerfile 경로는 필수입니다.';
+
     const replicaCount = parseInt(formData.helmReplicaCount, 10);
     if (isNaN(replicaCount) || replicaCount < 0) newErrors.helmReplicaCount = '레플리카 수는 0 이상의 숫자여야 합니다.';
     const port = parseInt(formData.containerPort, 10);
@@ -110,11 +99,9 @@ const PrepareRunPage: React.FC = () => {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     // projectDetails 의존성 제거, projectNameFromUrl로 대체 또는 applicationName 직접 사용
-    if (!validateForm() || !projectNameFromUrl || !formData.applicationName) {
+    if (!validateForm() || !projectNameFromUrl) { // applicationName 조건 제거
       if (!projectNameFromUrl) {
           setErrors(prev => ({ ...prev, apiError: "프로젝트 이름이 URL에 없습니다."}));
-      } else if (!formData.applicationName) {
-           setErrors(prev => ({ ...prev, apiError: "애플리케이션 이름이 설정되지 않았습니다."}));
       }
       return;
     }
@@ -124,8 +111,8 @@ const PrepareRunPage: React.FC = () => {
 
     const payload = {
       branch: formData.newBranchName.trim(),
-      applicationName: formData.applicationName, // 폼 상태의 applicationName 사용
-      dockerfilePath: formData.dockerfilePath,
+      applicationName: projectNameFromUrl, // URL에서 직접 사용
+      dockerfilePath: './Dockerfile', // 하드코딩
       helmValueOverrides: {
         replicaCount: parseInt(formData.helmReplicaCount, 10),
         containerPort: parseInt(formData.containerPort, 10),
@@ -137,7 +124,7 @@ const PrepareRunPage: React.FC = () => {
         }
       },
     };
-    
+
     console.log('백엔드로 전송할 페이로드:', payload);
 
     try {
@@ -155,7 +142,7 @@ const PrepareRunPage: React.FC = () => {
       }
 
       setSuccessMessage(responseData.message || `Version ID ${responseData.versionId} (이름: ${responseData.versionName})에 대한 파이프라인이 시작되었습니다!`);
-      
+
       const targetUrl = `/project/${projectNameFromUrl}/workflow`;
       console.log(`성공! 다음 URL로 이동 시도: ${targetUrl}`);
       router.push(targetUrl);
@@ -175,7 +162,7 @@ const PrepareRunPage: React.FC = () => {
   }
   // projectNameFromUrl이 없으면 오류 메시지 표시
   if (!projectNameFromUrl) {
-     return <div className="min-h-screen bg-[#0d1117] text-gray-200 flex justify-center items-center"><p className="text-red-400">{errors.apiError || `프로젝트 이름을 URL에서 찾을 수 없습니다. URL 형식을 확인해주세요: /project/[프로젝트이름]/prepare-run`}</p></div>;
+      return <div className="min-h-screen bg-[#0d1117] text-gray-200 flex justify-center items-center"><p className="text-red-400">{errors.apiError || `프로젝트 이름을 URL에서 찾을 수 없습니다. URL 형식을 확인해주세요: /project/[프로젝트이름]/prepare-run`}</p></div>;
   }
 
   return (
@@ -184,7 +171,7 @@ const PrepareRunPage: React.FC = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-100 mb-1">새 파이프라인 실행 설정</h1>
           {/* projectDetails.name 대신 formData.applicationName 또는 projectNameFromUrl 사용 */}
-          <p className="text-sm text-gray-400">프로젝트: <span className="font-semibold text-orange-400">{formData.applicationName || projectNameFromUrl}</span></p>
+          <p className="text-sm text-gray-400">프로젝트: <span className="font-semibold text-orange-400">{projectNameFromUrl}</span></p>
           {/* projectDetails.githubUrl은 이제 없으므로, 필요하다면 다른 방식으로 표시하거나 생략 */}
           {/* <p className="text-xs text-gray-500 truncate">Git Repo: {projectDetails?.githubUrl}</p> */}
         </div>
@@ -203,8 +190,8 @@ const PrepareRunPage: React.FC = () => {
             <p className="mt-1 text-xs text-gray-500">존재하지 않는 브랜치 입력 시, 프로젝트의 기본 브랜치에서 새로 생성합니다.</p>
           </div>
 
-          {/* 애플리케이션 이름 (URL의 projectNameFromUrl로 고정, 수정 불가) */}
-          <div>
+          {/* 애플리케이션 이름 (URL의 projectNameFromUrl로 고정, 수정 불가) - 삭제됨 */}
+          {/* <div>
             <label htmlFor="applicationName" className="block text-sm font-medium text-gray-400 mb-1">애플리케이션 이름</label>
             <input
               type="text" name="applicationName" id="applicationName"
@@ -213,15 +200,15 @@ const PrepareRunPage: React.FC = () => {
               className="w-full px-3 py-2 bg-[#0d1117] border border-[#30363d] rounded-md text-gray-400 cursor-not-allowed"
             />
              <p className="mt-1 text-xs text-gray-500">애플리케이션 이름은 URL의 프로젝트 식별자로 자동 설정됩니다.</p>
-          </div>
+          </div> */}
 
-          {/* Dockerfile 경로 */}
-          <div>
+          {/* Dockerfile 경로 - 삭제됨 */}
+          {/* <div>
             <label htmlFor="dockerfilePath" className="block text-sm font-medium text-gray-400 mb-1">Dockerfile 경로 <span className="text-red-400">*</span></label>
             <input type="text" name="dockerfilePath" id="dockerfilePath" value={formData.dockerfilePath} onChange={handleChange}
               className={`w-full px-3 py-2 bg-[#010409] border ${errors.dockerfilePath ? 'border-red-600' : 'border-[#30363d]'} rounded-md focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500 text-gray-200`} />
             {errors.dockerfilePath && <p className="mt-1 text-xs text-red-400">{errors.dockerfilePath}</p>}
-          </div>
+          </div> */}
 
           <fieldset className="space-y-6 pt-6 border-t border-[#30363d]">
             <legend className="text-lg font-semibold text-gray-300 mb-3">Helm 값 오버라이드 (버전별 리소스 요청)</legend>
@@ -232,8 +219,8 @@ const PrepareRunPage: React.FC = () => {
               <div>
                 <strong className="text-orange-300 block">플랫폼 정책에 따른 자동 제한(Limit) 설정 안내:</strong>
                 <ul className="list-disc list-inside pl-2 mt-1 text-gray-400 space-y-0.5">
-                  <li>CPU 제한: 일반적으로 입력하신 CPU 요청 값의 <strong>약 1.5배 ~ 2배</strong> 범위 내에서 자동 설정됩니다.</li>
-                  <li>메모리 제한: 일반적으로 입력하신 메모리 요청 값의 <strong>약 1.5배 ~ 2배</strong> 범위 내에서 자동 설정됩니다.</li>
+                  <li>CPU 제한: 일반적으로 입력하신 CPU 요청 값의 **약 1.5배 ~ 2배** 범위 내에서 자동 설정됩니다.</li>
+                  <li>메모리 제한: 일반적으로 입력하신 메모리 요청 값의 **약 1.5배 ~ 2배** 범위 내에서 자동 설정됩니다.</li>
                 </ul>
                 <p className="mt-1">정확한 제한 값은 백엔드에서 최종 결정됩니다.</p>
               </div>
@@ -270,7 +257,6 @@ const PrepareRunPage: React.FC = () => {
 
           <div className="pt-6">
             <button type="submit" disabled={isLoading}
-
               className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isLoading ? '파이프라인 시작 중...' : '파이프라인 시작'}
