@@ -1,9 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import {
   PrismaClient,
-  StepStatus,
-  AnalysisStatus,
-  FlowStatus,
   Prisma,
   Project,
   Version,
@@ -211,22 +208,9 @@ export default async function handler(
           branch: requestedBranchName,
           commitHash: targetCommitSha,
           applicationName: applicationName,
-          codeStatus: StepStatus.pending,
-          buildStatus: StepStatus.none,
-          imageStatus: StepStatus.none,
-          deployStatus: StepStatus.none,
-          approveStatus: 'none',
-          flowStatus: FlowStatus.pending,
           projectId: project.id,
           authorId: project.ownerId || 1,
           helmValuesId: createdHelmValues.id,
-        },
-      });
-
-      await tx.codeAnalysis.create({
-        data: {
-          versionId: versionData.id,
-          status: AnalysisStatus.pending,
         },
       });
 
