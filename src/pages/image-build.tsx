@@ -12,6 +12,39 @@ export default function ImageBuild() {
   const router = useRouter();
   const [buildInfo, setBuildInfo] = useState<BuildInfo | null>(null)
 
+  const { projectName, versionId } = router.query // URL 파라미터 추출
+
+  const [loading, setLoading] = useState(false)
+  const [triggerResult, setTriggerResult] = useState<string | null>(null)
+
+  const handleTrigger = async () => {
+    if (!projectName || !versionId) {
+      setTriggerResult('Invalid project or version info')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const res = await fetch('/api/image-build/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectName, versionId }),
+      })
+
+      const data = await res.json()
+      if (res.ok) {
+        setTriggerResult('Workflow triggered successfully!')
+      } else {
+        setTriggerResult(`Error: ${data.error || 'Unknown error'}`)
+      }
+    } catch (err) {
+      console.error(err)
+      setTriggerResult('Error triggering workflow')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
     const fetchBuildStatus = async () => {
       try {
