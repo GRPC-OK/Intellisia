@@ -3,13 +3,13 @@ name: Run Image Build and Scan
 on:
   workflow_dispatch:
     inputs:
-      versionId:
+      versionId: # 여기를 versionName 대신 versionId로 변경
         required: true
       repo:
         required: true
       ref:
         required: true
-        
+
 jobs:
   image-build-and-scan:
     runs-on: ubuntu-latest
@@ -32,15 +32,15 @@ jobs:
         run: |
           cd target-repo
           # [변경] 로컬에서 스캔할 이미지 태그를 정의
-          LOCAL_IMAGE_TAG="local-my-app:${{ github.event.inputs.versionId }}" 
-          
+          LOCAL_IMAGE_TAG="local-my-app:${{ github.event.inputs.versionId }}" # 여기도 versionId로 변경
+
           if docker build -t "$LOCAL_IMAGE_TAG" .; then
             echo "status=success" >> $GITHUB_OUTPUT
             echo "local_image_tag=$LOCAL_IMAGE_TAG" >> $GITHUB_OUTPUT # [변경] 로컬 이미지 태그 출력
           else
             echo "status=fail" >> $GITHUB_OUTPUT
           fi
-          
+
       # 4. Trivy 취약점 스캔 (SARIF 형식으로 바로 출력)
       - name: Run Trivy vulnerability scan and generate SARIF
         if: success() && steps.build-local.outputs.status == 'success'
@@ -54,7 +54,7 @@ jobs:
 
       # [변경] JSON to SARIF 변환 스텝 제거 - 이제 Trivy가 바로 SARIF를 생성
       # - name: Convert Trivy JSON to SARIF and Upload to Code Scanning (이 스텝은 더 이상 필요 없음)
-      #   ...
+      #   ...
 
       # 5. Docker Hub 로그인 (스캔 후 푸시)
       - name: Login to Docker Hub
@@ -72,11 +72,11 @@ jobs:
           # [변경] 로컬 이미지 태그를 가져와서 Docker Hub에 푸시
           LOCAL_IMAGE_TAG="${{ steps.build-local.outputs.local_image_tag }}"
           DOCKERHUB_REPOSITORY_NAME="${{ secrets.DOCKERHUB_USERNAME }}/my-app"
-          DOCKERHUB_IMAGE_URI="$DOCKERHUB_REPOSITORY_NAME:${{ github.event.inputs.versionId }}"
-          
+          DOCKERHUB_IMAGE_URI="$DOCKERHUB_REPOSITORY_NAME:${{ github.event.inputs.versionId }}" # 여기도 versionId로 변경
+
           # 로컬 이미지 태그를 Docker Hub URI로 태그 지정
           docker tag "$LOCAL_IMAGE_TAG" "$DOCKERHUB_IMAGE_URI"
-          
+
           if docker push "$DOCKERHUB_IMAGE_URI"; then
             # latest 태그도 함께 푸시
             docker tag "$DOCKERHUB_IMAGE_URI" "$DOCKERHUB_REPOSITORY_NAME:latest"
@@ -91,13 +91,13 @@ jobs:
         # [변경] 푸시 성공 여부와 상관없이 빌드 자체 결과만 보고
         if: always() # 빌드 스텝 결과에 따라 항상 알림
         run: |
-          CALLBACK_URL="http://3.35.153.146/api/build-and-scan/callback_build" 
+          CALLBACK_URL="http://3.35.153.146/api/image-build/callback_build"
           if [ "${{ steps.build-local.outputs.status }}" = "success" ]; then # [변경] build-local 스텝의 상태 사용
-            curl -X POST "$CALLBACK_URL?versionId=${{ github.event.inputs.versionId }}&status=success"
+            curl -X POST "$CALLBACK_URL?versionId=${{ github.event.inputs.versionId }}&status=success" # 여기도 versionId로 변경
           else
-            curl -X POST "$CALLBACK_URL?versionId=${{ github.event.inputs.versionId }}&status=fail"
+            curl -X POST "$CALLBACK_URL?versionId=${{ github.event.inputs.versionId }}&status=fail" # 여기도 versionId로 변경
           fi
-      
+
       # 8. AWS Credentials 설정 (S3 업로드용)
       - name: Configure AWS Credentials
         if: always()
@@ -106,7 +106,7 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
-      
+
       # 9. Trivy 스캔 결과 S3 업로드 및 백엔드 알림
       - name: Upload Trivy Results to S3 and Notify Backend
         if: always()
@@ -117,12 +117,12 @@ jobs:
 
           SCAN_STATUS="fail"
           TRIVY_FILE="trivy-results.sarif"
-          TARGET_PATH="image-analysis/version-${{ github.event.inputs.versionId }}/$TRIVY_FILE"
+          TARGET_PATH="image-analysis/version-${{ github.event.inputs.versionId }}/$TRIVY_FILE" # 여기도 versionId로 변경
           PUBLIC_URL=""
 
           if [ -f "$TRIVY_FILE" ]; then
-            aws s3 cp "$TRIVY_FILE" "s3://$BUCKET/$TARGET_PATH" --acl public-read
-            PUBLIC_URL="<https://$BUCKET.s3.$REGION.amazonaws.com/$TARGET_PATH>"
+            aws s3 cp "$TRIVY_FILE" "s3://$BUCKET/$TARGET_PATH"
+            PUBLIC_URL="https://$BUCKET.s3.$REGION.amazonaws.com/$TARGET_PATH"
             echo "Uploaded Trivy report: $PUBLIC_URL"
 
             # 모든 심각도에 상관없이 항상 success로 간주
@@ -132,9 +132,9 @@ jobs:
             SCAN_STATUS="fail" # 파일 자체가 없으면 실패로 유지
           fi
 
-              curl -X POST "$IMAGE_ANALYSIS_CALLBACK_URL" \
-                -H "Content-Type: application/json" \
-                -d '{
-                  "status": "'$SCAN_STATUS'",
-                  "fileUrl": "'$PUBLIC_URL'" # S3버킷 URL
-                }'
+          curl -X POST "$IMAGE_ANALYSIS_CALLBACK_URL" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "status": "'$SCAN_STATUS'",
+              "fileUrl": "'$PUBLIC_URL'" # S3버킷 URL
+            }'
