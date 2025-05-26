@@ -30,7 +30,17 @@ export async function createVersionWithAutoName(
     orderBy: { createdAt: 'desc' },
   });
 
-  let currentName = latest?.name ?? '1.0.0';
+  if (!latest) {
+    // 최초 버전일 경우 '1.0.0'으로 저장
+    return await tx.version.create({
+      data: {
+        ...data,
+        name: '1.0.0',
+      },
+    });
+  }
+
+  let currentName = latest.name;
 
   while (attempt < MAX_RETRIES) {
     const newName = nextVersion(currentName);
