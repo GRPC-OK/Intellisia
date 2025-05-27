@@ -2,6 +2,7 @@ import prisma from '@/lib/prisma';
 import { initiateVersionInsideTx } from '@/services/version-service/initiate-version.service';
 import { updateVersionStatusSafelyWithTx } from '@/services/version-service/version-status-updater-with-tx.service';
 import { triggerSemgrepWorkflow } from '@/services/code-analysis-service/trigger-semgrep-workflow';
+import { triggerImageWorkflow } from '@/pages/api/image-build/trigger-image-workflow';
 import type { CreateVersionParams } from '@/services/version-service/initiate-version.service';
 import { AnalysisStatus } from '@prisma/client';
 
@@ -51,6 +52,36 @@ export async function startFullFlow(
     await prisma.$transaction(async (tx) => {
       await updateVersionStatusSafelyWithTx(tx, version.id, {
         codeStatus: 'fail',
+        flowStatus: 'fail',
+      });
+
+      await tx.codeAnalysis.update({
+        where: { versionId: version.id },
+        data: {
+          status: AnalysisStatus.failed,
+          errorLogUrl: 'Trigger failed: ' + String(err),
+        },
+      });
+    });
+
+    throw new Error('GitHub Actions 트리거 실패: ' + String(err));
+  }
+
+  try {
+    await triggerImageWorkflow({
+      versionId: version.id,
+      repoUrl: project.githubUrl,
+      branch: version.branch,
+    });
+    console.log(
+      `[SUCCESS] GitHub Actions 트리거 완료: versionId=${version.id}`
+    );
+  } catch (err) {
+    console.error('Semgrep 트리거 실패:', err);
+
+    await prisma.$transaction(async (tx) => {
+      await updateVersionStatusSafelyWithTx(tx, version.id, {
+        imageStatus: 'fail',
         flowStatus: 'fail',
       });
 
