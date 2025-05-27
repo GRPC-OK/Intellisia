@@ -75,7 +75,7 @@ jobs:
 
       - name: Notify Backend
         run: |
-          curl -X POST "${{ github.event.inputs.callbackUrl }}?versionId=${{ github.event.inputs.versionId }}" \
+          curl -X POST "${{ github.event.inputs.callbackUrl }}" \
             -H "Content-Type: application/json" \
             -d '{
               "status": "'${{ steps.semgrep.outputs.status }}'",
