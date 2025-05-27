@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Clone target repository
         env:
-          GH_TOKEN: ${{ secrets.PLATFORM_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.INTELLISIA_GITHUB_TOKEN }}  
         run: |
           git clone --branch ${{ github.event.inputs.ref }} \
             https://$GH_TOKEN@github.com/${{ github.event.inputs.repo }} target-repo
@@ -42,7 +42,6 @@ jobs:
           else
             echo "status=fail" >> $GITHUB_OUTPUT
           fi
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -69,15 +68,16 @@ jobs:
           aws s3 cp "output/$TARGET_FILE" "s3://$BUCKET/$TARGET_PATH"
 
           PUBLIC_URL="https://$BUCKET.s3.$REGION.amazonaws.com/$TARGET_PATH"
+
           echo "url=$PUBLIC_URL" >> $GITHUB_OUTPUT
           echo "Uploaded: $PUBLIC_URL"
+
 
       - name: Notify Backend
         run: |
           curl -X POST "${{ github.event.inputs.callbackUrl }}" \
             -H "Content-Type: application/json" \
             -d '{
-              "versionId": '${{ github.event.inputs.versionId }}',
               "status": "'${{ steps.semgrep.outputs.status }}'",
               "fileUrl": "'${{ steps.upload.outputs.url }}'"
             }'
