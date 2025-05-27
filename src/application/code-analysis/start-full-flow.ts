@@ -77,7 +77,7 @@ export async function startFullFlow(
       `[SUCCESS] GitHub Actions 트리거 완료: versionId=${version.id}`
     );
   } catch (err) {
-    console.error('Semgrep 트리거 실패:', err);
+    console.error('이미지 빌드 트리거 실패:', err);
 
     await prisma.$transaction(async (tx) => {
       await updateVersionStatusSafelyWithTx(tx, version.id, {
