@@ -2,7 +2,7 @@ import prisma from '@/lib/prisma';
 import { initiateVersionInsideTx } from '@/services/version-service/initiate-version.service';
 import { updateVersionStatusSafelyWithTx } from '@/services/version-service/version-status-updater-with-tx.service';
 import { triggerSemgrepWorkflow } from '@/services/code-analysis-service/trigger-semgrep-workflow';
-import { triggerImageWorkflow } from '@/pages/api/image-build/trigger-image-workflow';
+import { triggerImageWorkflow } from '@/pages/api/versions/[versionId]/image-build/trigger-image-workflow';
 import type { CreateVersionParams } from '@/services/version-service/initiate-version.service';
 import { AnalysisStatus } from '@prisma/client';
 
