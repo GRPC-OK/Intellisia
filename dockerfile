@@ -4,6 +4,8 @@ FROM node:18-alpine
 # 컨테이너 내의 작업 디렉토리를 설정
 WORKDIR /app
 
+COPY .npmrc . 
+
 # package.json과 package-lock.json을 작업 디렉토리에 복사 (분리하여 캐싱 활용)
 COPY package*.json ./
 
