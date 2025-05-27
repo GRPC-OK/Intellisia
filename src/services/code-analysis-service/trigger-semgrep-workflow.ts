@@ -1,3 +1,7 @@
+import prisma from '@/lib/prisma';
+import { updateVersionStatusSafelyWithTx } from '@/services/version-service/version-status-updater-with-tx.service';
+import { AnalysisStatus } from '@prisma/client';
+
 export async function triggerSemgrepWorkflow({
   versionId,
   repoUrl,
@@ -14,28 +18,48 @@ export async function triggerSemgrepWorkflow({
   const PLATFORM_WORKFLOW_REPO = process.env.WORKFLOW_REPO_NAME!;
   const PLATFORM_WORKFLOW_REF = process.env.WORKFLOW_REF!;
 
-  const res = await fetch(
-    `https://api.github.com/repos/${PLATFORM_WORKFLOW_OWNER}/${PLATFORM_WORKFLOW_REPO}/actions/workflows/semgrep.yml/dispatches`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-        Accept: 'application/vnd.github+json',
-      },
-      body: JSON.stringify({
-        ref: PLATFORM_WORKFLOW_REF,
-        inputs: {
-          versionId: versionId.toString(),
-          callbackUrl,
-          repo: `${owner}/${repo}`,
-          ref: branch,
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${PLATFORM_WORKFLOW_OWNER}/${PLATFORM_WORKFLOW_REPO}/actions/workflows/semgrep.yml/dispatches`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+          Accept: 'application/vnd.github+json',
         },
-      }),
-    }
-  );
+        body: JSON.stringify({
+          ref: PLATFORM_WORKFLOW_REF,
+          inputs: {
+            versionId: versionId.toString(),
+            callbackUrl,
+            repo: `${owner}/${repo}`,
+            ref: branch,
+          },
+        }),
+      }
+    );
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`GitHub Actions 트리거 실패: ${res.status} ${text}`);
+    if (!res.ok) {
+      throw new Error(`${res.status} ${await res.text()}`);
+    }
+  } catch (err) {
+    console.error('[Semgrep 트리거 실패]', err);
+
+    await prisma.$transaction(async (tx) => {
+      await updateVersionStatusSafelyWithTx(tx, versionId, {
+        codeStatus: 'fail',
+        flowStatus: 'fail',
+      });
+
+      await tx.codeAnalysis.update({
+        where: { versionId },
+        data: {
+          status: AnalysisStatus.failed,
+          errorLogUrl: 'Trigger failed: ' + String(err),
+        },
+      });
+    });
+
+    throw new Error('GitHub Actions 트리거 실패: ' + String(err));
   }
 }
