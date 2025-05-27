@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: GRPC-OK/argocd-apps
-          token: ${{ secrets.ARGOCD_REPO_TOKEN }}
+          token: ${{ secrets.INTELLISIA_GITHUB_TOKEN }}
           path: argocd-apps
 
       - name: Create or Update Helm Values
