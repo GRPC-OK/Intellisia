@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { startFullFlow } from '@/application/code-analysis/start-full-flow';
+import { startFullFlow } from '@/application/start-full-flow';
 import type { CreateVersionParams } from '@/services/version-service/initiate-version.service';
 
 export default async function handler(
