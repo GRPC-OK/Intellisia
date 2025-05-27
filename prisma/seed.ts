@@ -31,7 +31,6 @@ async function main() {
       imageTag: 'v1.0.0',
       branch: 'main',
       commitHash: 'abc123',
-      applicationName: 'sample-app',
       isCurrent: true,
       authorId: user.id,
       projectId: project.id,
