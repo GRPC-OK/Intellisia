@@ -71,4 +71,4 @@ jobs:
             STATUS="fail"
           fi
           
-          curl -X POST "${{ secrets.INTELLISIA_BASE_URL }}/api/deployment/callback?versionId=${{ inputs.versionId }}&status=$STATUS"
+          curl -X POST "${{ secrets.ENV }}/api/deployment/callback?versionId=${{ inputs.versionId }}&status=$STATUS"
