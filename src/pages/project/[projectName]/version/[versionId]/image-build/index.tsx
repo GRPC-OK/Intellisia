@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import styles from 'C:\Users\KISIA\Desktop\Git\src\styles\image-build.module.css';
+import styles from '@/styles/image-build.module.css';
 
 type BuildInfo = {
   name: string
