@@ -1,8 +1,14 @@
+<<<<<<< HEAD
 // src/pages/api/versions/[versionId]/approval-decision.ts (수정된 버전)
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { updateVersionStatusSafely } from '@/services/version-service/version-status-updater.service';
 import { triggerDeploymentWorkflow } from '@/services/deployment-service/trigger-deployment-workflow';
 import prisma from '@/lib/prisma';
+=======
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { updateVersionStatusSafely } from '@/services/version-service/version-status-updater.service';
+import { triggerDeploymentAfterApproval } from '@/application/trigger-deployment-after-approval';
+>>>>>>> e383dde (feat: 배포 승인 시 approval API 호출 및 flow 상태 갱신 로직 추가)
 
 export default async function handler(
   req: NextApiRequest,
@@ -73,7 +79,6 @@ export default async function handler(
       versionId,
       status: 'approved_and_deploying', // 🆕 새로운 상태
     });
-
   } catch (error) {
     console.error('[APPROVAL AND DEPLOY ERROR]', error);
     

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import FlowStage, { FlowStatusType } from '@/components/version/FlowStage';
 import FlowConnector from '@/components/version/FlowConnector';
@@ -13,7 +13,6 @@ import {
   isStageClickable,
   getStageRoute,
   canShowReviewButton,
-  shouldPollFlowStatus,
   generateFlowConnections,
 } from '@/lib/version-flow-utils';
 
@@ -26,17 +25,18 @@ export default function VersionFlowPage() {
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
-  const fetchStatus = async () => {
+  const fetchStatus = useCallback(async () => {
     try {
       const res = await fetch(`/api/versions/${versionId}/flow-status`);
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-      const json = await res.json();
+      const json: VersionFlowStatus = await res.json();
       setData(json);
 
-      // 폴링 중단 조건 확인 (성능 최적화)
-      if (!shouldPollFlowStatus(json)) {
-        return; // 배포 완료되면 폴링 중단
+      if (json.flowStatus === 'success' && pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
       }
     } catch (err) {
       console.error('Failed to fetch status:', err);
@@ -44,16 +44,21 @@ export default function VersionFlowPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [versionId]);
 
   useEffect(() => {
     if (!router.isReady || typeof versionId !== 'string') return;
 
-    const interval = setInterval(fetchStatus, 10000);
     fetchStatus();
+    pollingRef.current = setInterval(fetchStatus, 10000);
 
-    return () => clearInterval(interval);
-  }, [router.isReady, versionId]);
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [router.isReady, versionId, fetchStatus]);
 
   const handleStageClick = (key: StageKey) => {
     if (
@@ -77,11 +82,20 @@ export default function VersionFlowPage() {
         body: JSON.stringify({ approved }),
       });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
       setShowModal(false);
 
+<<<<<<< HEAD
       // 승인 후 즉시 상태 업데이트 (배포 시작됨)
       await fetchStatus();
       
+=======
+      const statusRes = await fetch(`/api/versions/${versionId}/flow-status`);
+      if (statusRes.ok) {
+        const json = await statusRes.json();
+        setData(json);
+      }
+>>>>>>> e383dde (feat: 배포 승인 시 approval API 호출 및 flow 상태 갱신 로직 추가)
     } catch (err) {
       console.error('Failed to approve:', err);
       setError(err instanceof Error ? err.message : 'Approval failed');
@@ -137,7 +151,6 @@ export default function VersionFlowPage() {
                 const rawStatus = (data?.[key as keyof VersionFlowStatus] ??
                   'none') as FlowStatusType;
                 const isApproval = key === 'approveStatus';
-                const isDeploy = key === 'deployStatus';
 
                 return (
                   <div
@@ -146,7 +159,7 @@ export default function VersionFlowPage() {
                     style={{
                       left: `${coord.x}%`,
                       top: `${coord.y}%`,
-                      transform: 'translate(-50%, -50%)',
+                      transform: `translate(-50%, -50%)`,
                     }}
                   >
                     <div className="relative flex flex-col items-center gap-y-1 leading-tight">
@@ -156,8 +169,6 @@ export default function VersionFlowPage() {
                         disabled={!isStageClickable(key, data)}
                         onClick={() => handleStageClick(key)}
                       />
-                      
-                      {/* 승인 버튼 */}
                       {isApproval && (
                         <div className="absolute top-full mt-6 left-1/2 -translate-x-1/2">
                           <button
@@ -173,6 +184,7 @@ export default function VersionFlowPage() {
                           </button>
                         </div>
                       )}
+<<<<<<< HEAD
 
                       {/* 배포 상태 표시만 (버튼 제거) */}
                       {isDeploy && data.approveStatus === 'approved' && (
@@ -193,6 +205,8 @@ export default function VersionFlowPage() {
                           </div>
                         </div>
                       )}
+=======
+>>>>>>> e383dde (feat: 배포 승인 시 approval API 호출 및 flow 상태 갱신 로직 추가)
                     </div>
                   </div>
                 );
