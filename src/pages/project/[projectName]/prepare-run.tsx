@@ -89,6 +89,33 @@ const PrepareRunPage: React.FC = () => {
     setSuccessMessage('');
     setErrors((prev) => ({ ...prev, apiError: undefined }));
 
+    // 선우==========================================================================
+    // fetch('/api/image-build/trigger') 호출 -> 일단은 하드코딩한 값으로 트리거됨.
+    try {
+    const response = await fetch('/api/image-build/trigger', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}), // 일단 빈 객체 (trigger.ts에서 하드코딩된 값 사용)
+    });
+
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      const errorMessage = responseData.message || responseData.error || `Error ${response.status}: 트리거 실패`;
+      setErrors(prev => ({ ...prev, apiError: errorMessage }));
+      return;
+    }
+
+    setSuccessMessage(responseData.message || '트리거 성공!');
+    router.push(`/project/${projectNameFromUrl}/workflow`);
+  } catch (error) {
+    console.error('API 호출 중 오류:', error);
+    setErrors(prevErrors => ({ ...prevErrors, apiError: '트리거 요청 중 오류 발생' }));
+  } finally {
+    setIsLoading(false);
+  }
+  // ==========================================================================선우
+
     const payload = {
       branch: formData.newBranchName.trim(),
       applicationName: projectName,
