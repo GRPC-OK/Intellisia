@@ -20,11 +20,12 @@ export default async function handler(
       select: {
         imageAnalysisS3Url: true, // ✅ 이 라인 뒤의 불필요한 '{'나 주석을 완전히 제거하세요.
         name: true,
-        id: true,
+        id: true, 
         project: {
           select: {
             name: true,
-            owner: true // ✅ 'owner: { name: true }' 대신 'owner: true'로 변경
+            owner: true, // ✅ 'owner: { name: true }' 대신 'owner: true'로 변경
+            id: true 
           }
         }
       }
