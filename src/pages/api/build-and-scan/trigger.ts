@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // 임시 하드코딩된 값
-    const versionId = 'v1.0.1' // 예: 'v1.0.1'
+    const versionId = '2'
     const ref = 'feature/my-test'
     const repo = 'https://github.com/GRPC-OK/Practice.git'
     const githubToken = process.env.PLATFORM_GITHUB_TOKEN

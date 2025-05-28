@@ -3,7 +3,7 @@ name: Run Image Build and Scan
 on:
   workflow_dispatch:
     inputs:
-      versionId: # 여기를 versionName 대신 versionId로 변경
+      versionId:
         required: true
       repo:
         required: true
@@ -135,6 +135,7 @@ jobs:
           curl -X POST "$IMAGE_ANALYSIS_CALLBACK_URL" \
             -H "Content-Type: application/json" \
             -d '{
+              "versionId": "'${{ github.event.inputs.versionId }}'",
               "status": "'$SCAN_STATUS'",
               "fileUrl": "'$PUBLIC_URL'" # S3버킷 URL
             }'

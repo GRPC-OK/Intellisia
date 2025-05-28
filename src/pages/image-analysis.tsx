@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState} from 'react';
 import { useRouter } from 'next/router';
 
 interface Vulnerability {
@@ -10,104 +10,89 @@ interface Vulnerability {
   affected: string;
 }
 
-const vulnerabilities: Vulnerability[] = [
-  {
-    id: 'CVE-2025-1234',
-    severity: 'Critical',
-    package: 'openssl',
-    version: '1.1.1',
-    description: 'Remote code execution vulnerability in OpenSSL',
-    affected: 'Base image'
-  },
-  {
-    id: 'CVE-2025-5678',
-    severity: 'High',
-    package: 'nginx',
-    version: '1.18.0',
-    description: 'Buffer overflow vulnerability in HTTP/2 implementation',
-    affected: 'Web server'
-  }
-];
-
 export default function ImageAnalysis() {
   const router = useRouter();
 
+  const { projectName, versionId } = router.query;
+
+  const [vulnerabilities, setVulnerabilities] = useState<Vulnerability[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!projectName || !versionId) return;
+
+    const fetchAnalysis = async () => {
+      try {
+        const res = await fetch(`/api/build-and-scan/image-analysis?projectName=${projectName}&versionId=${versionId}`);
+        if (!res.ok) throw new Error('Failed to fetch analysis data');
+        const data = await res.json();
+        setVulnerabilities(data.vulnerabilities || []);
+      } catch (err) {
+        console.error('[ImageAnalysis] fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnalysis();
+  }, [projectName, versionId]);
+
   const handleNext = () => {
-    router.push('/deployment-approval');
+    router.push(`/project/${projectName}/version/${versionId}/deployment-approval`);
   };
 
   return (
     <div className="github-bg">
-      <header className="github-header">
-        <div className="github-logo"></div>
-        <div className="github-header-right">
-          <nav className="github-nav">
-            <a href="#">Pull requests</a>
-            <a href="#">Issues</a>
-            <a href="#">Marketplace</a>
-            <a href="#">Explore</a>
-          </nav>
-          <div className="github-header-actions">
-            <button className="github-new-btn-blue">New</button>
-            <button className="github-icon-btn" title="Notifications">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M10 18c1.1 0 2-.9 2-2H8c0 1.1.9 2 2 2zm6-4V9c0-3.07-1.63-5.64-5-6.32V2a1 1 0 10-2 0v.68C5.63 3.36 4 5.92 4 9v5l-1 1v1h14v-1l-1-1zm-2 1H6v-6c0-2.48 1.51-4 4-4s4 1.52 4 4v6z" fill="#c9d1d9"/>
-              </svg>
-            </button>
-            <button className="github-icon-btn" title="Add">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="10" cy="10" r="9" stroke="#c9d1d9" strokeWidth="2" fill="none"/>
-                <rect x="9" y="5" width="2" height="10" rx="1" fill="#c9d1d9"/>
-                <rect x="5" y="9" width="10" height="2" rx="1" fill="#c9d1d9"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </header>
-      <main className="main-container-flex" style={{ position: 'relative' }}>
+       <main className="main-container-flex" style={{ position: 'relative' }}>
         <div className="main-content-left">
           <h1 className="main-title">Image Static Analysis Results</h1>
-          <p className="main-subtitle">We found 2 high severity vulnerabilities in your dependencies. We recommend you review and address them as soon as possible</p>
-          <section className="step-section">
-            <div className="step-title">Vulnerability details</div>
-            <div className="vulnerability-summary">
-              <div className="summary-item critical">
-                <span className="count">1</span>
-                <span className="label">Critical</span>
-              </div>
-              <div className="summary-item high">
-                <span className="count">1</span>
-                <span className="label">High</span>
-              </div>
-            </div>
-            <div className="vuln-list">
-              {vulnerabilities.map((vuln, index) => (
-                <div key={index} className="vuln-item">
-                  <span className="vuln-icon">🛡️</span>
-                  <div className="vuln-content">
-                    <div className="vuln-header">
-                      <span className={`severity-badge ${vuln.severity.toLowerCase()}`}>{vuln.severity}</span>
-                      <span className="vuln-cve">{vuln.id}</span>
-                    </div>
-                    <div className="vuln-details">
-                      <div className="package-info">
-                        <strong>{vuln.package}</strong>@{vuln.version}
-                      </div>
-                      <div className="affected-component">
-                        Affected: {vuln.affected}
-                      </div>
-                      <div className="description">
-                        {vuln.description}
-                      </div>
-                    </div>
+            <>
+              <p className="main-subtitle">
+                We found {vulnerabilities.length} vulnerabilities in your dependencies. We recommend you review and address them as soon as possible.
+              </p>
+
+              <section className="step-section">
+                <div className="step-title">Vulnerability details</div>
+                <div className="vulnerability-summary">
+                  <div className="summary-item critical">
+                    <span className="count">{vulnerabilities.filter(v => v.severity === 'Critical').length}</span>
+                    <span className="label">Critical</span>
+                  </div>
+                  <div className="summary-item high">
+                    <span className="count">{vulnerabilities.filter(v => v.severity === 'High').length}</span>
+                    <span className="label">High</span>
                   </div>
                 </div>
-              ))}
-            </div>
-            <div className="action-buttons">
-              <button className="next-btn" onClick={handleNext}>Next</button>
-            </div>
-          </section>
+
+                <div className="vuln-list">
+                  {vulnerabilities.map((vuln, index) => (
+                    <div key={index} className="vuln-item">
+                      <span className="vuln-icon">🛡️</span>
+                      <div className="vuln-content">
+                        <div className="vuln-header">
+                          <span className={`severity-badge ${vuln.severity.toLowerCase()}`}>{vuln.severity}</span>
+                          <span className="vuln-cve">{vuln.id}</span>
+                        </div>
+                        <div className="vuln-details">
+                          <div className="package-info">
+                            <strong>{vuln.package}</strong>@{vuln.version}
+                          </div>
+                          <div className="affected-component">
+                            Affected: {vuln.affected}
+                          </div>
+                          <div className="description">
+                            {vuln.description}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="action-buttons">
+                  <button className="next-btn" onClick={handleNext}>Next</button>
+                </div>
+              </section>
+            </>
         </div>
       </main>
       <style jsx>{`

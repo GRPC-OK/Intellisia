@@ -66,5 +66,9 @@ export async function startFullFlow(
     throw new Error('GitHub Actions 트리거 실패: ' + String(err));
   }
 
+
+  
+
+
   return version;
 }
