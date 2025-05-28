@@ -12,8 +12,8 @@ interface Vulnerability {
 
 export default function ImageAnalysis() {
   const router = useRouter();
-
-  const { projectName, versionId } = router.query;
+  const projectName = router.query.projectName as string | undefined;
+  const versionId = router.query.versionId as string | undefined;
 
   const [vulnerabilities, setVulnerabilities] = useState<Vulnerability[]>([]);
   const [loading, setLoading] = useState(true);
