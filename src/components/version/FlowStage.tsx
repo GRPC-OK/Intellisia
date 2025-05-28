@@ -1,4 +1,3 @@
-// components/version/FlowStage.tsx
 import React from 'react';
 import clsx from 'clsx';
 
@@ -60,7 +59,7 @@ const FlowStage: React.FC<FlowStageProps> = ({
       className={clsx(
         'rounded-full border-2 flex flex-col justify-center items-center gap-1 text-sm font-semibold transition-all duration-200',
         statusColors[status],
-        disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+        disabled ? 'cursor-not-allowed' : 'cursor-pointer',
         className
       )}
       onClick={disabled ? undefined : onClick}
