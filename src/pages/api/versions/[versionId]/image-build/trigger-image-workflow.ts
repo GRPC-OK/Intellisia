@@ -1,8 +1,7 @@
 import prisma from '@/lib/prisma';
 import { updateVersionStatusSafelyWithTx } from '@/services/version-service/version-status-updater-with-tx.service';
-import { AnalysisStatus } from '@prisma/client';
 
-export async function triggerSemgrepWorkflow({
+export async function triggerImageWorkflow({
   versionId,
   repoUrl,
   branch,
@@ -11,8 +10,9 @@ export async function triggerSemgrepWorkflow({
   repoUrl: string;
   branch: string;
 }) {
-  const [owner, repo] = new URL(repoUrl).pathname.slice(1).split('/');
-  const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/versions/${versionId}/code-analysis`;
+  const pathParts = new URL(repoUrl).pathname.slice(1).split('/');
+  const owner = pathParts[0];
+  const repo = pathParts[1].replace(/\.git$/, '');
 
   const PLATFORM_WORKFLOW_OWNER = process.env.WORKFLOW_REPO_OWNER!;
   const PLATFORM_WORKFLOW_REPO = process.env.WORKFLOW_REPO_NAME!;
@@ -20,7 +20,7 @@ export async function triggerSemgrepWorkflow({
 
   try {
     const res = await fetch(
-      `https://api.github.com/repos/${PLATFORM_WORKFLOW_OWNER}/${PLATFORM_WORKFLOW_REPO}/actions/workflows/semgrep.yml/dispatches`,
+      `https://api.github.com/repos/${PLATFORM_WORKFLOW_OWNER}/${PLATFORM_WORKFLOW_REPO}/actions/workflows/image_build_and_scan.yml/dispatches`,
       {
         method: 'POST',
         headers: {
@@ -31,7 +31,6 @@ export async function triggerSemgrepWorkflow({
           ref: PLATFORM_WORKFLOW_REF,
           inputs: {
             versionId: versionId.toString(),
-            callbackUrl,
             repo: `${owner}/${repo}`,
             ref: branch,
           },
@@ -43,20 +42,12 @@ export async function triggerSemgrepWorkflow({
       throw new Error(`${res.status} ${await res.text()}`);
     }
   } catch (err) {
-    console.error('[Semgrep 트리거 실패]', err);
+    console.error('[Image Build 트리거 실패]', err);
 
     await prisma.$transaction(async (tx) => {
       await updateVersionStatusSafelyWithTx(tx, versionId, {
-        codeStatus: 'fail',
+        imageStatus: 'fail',
         flowStatus: 'fail',
-      });
-
-      await tx.codeAnalysis.update({
-        where: { versionId },
-        data: {
-          status: AnalysisStatus.failed,
-          errorLogUrl: 'Trigger failed: ' + String(err),
-        },
       });
     });
 

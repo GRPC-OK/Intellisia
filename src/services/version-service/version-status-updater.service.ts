@@ -28,11 +28,15 @@ export async function updateVersionStatusSafely(
 
     if (!current) throw new Error('Version not found');
 
-    // codeStatus와 imageStatus가 모두 success이고, approveStatus가 아직 none일 경우만 갱신
+    const willBeCodeSuccess =
+      (update.codeStatus ?? current.codeStatus) === 'success';
+    const willBeImageSuccess =
+      (update.imageStatus ?? current.imageStatus) === 'success';
+
     const shouldUpdateApprove =
       current.approveStatus === 'none' &&
-      (update.codeStatus ?? current.codeStatus) === 'success' &&
-      (update.imageStatus ?? current.imageStatus) === 'success';
+      willBeCodeSuccess &&
+      willBeImageSuccess;
 
     const nextApproveStatus = shouldUpdateApprove
       ? 'pending'
