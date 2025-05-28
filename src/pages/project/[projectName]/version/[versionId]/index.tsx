@@ -1,3 +1,4 @@
+// src/pages/project/[projectName]/version/[versionId]/index.tsx (업데이트)
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
@@ -5,6 +6,7 @@ import { useRouter } from 'next/router';
 import FlowStage, { FlowStatusType } from '@/components/version/FlowStage';
 import FlowConnector from '@/components/version/FlowConnector';
 import ApprovalModal from '@/components/version/ApprovalModal';
+import DeployButton from '@/components/version/DeployButton';
 import VersionHeader from '@/components/version/VersionHeader';
 import { VersionFlowStatus } from '@/types/version-flow';
 import {
@@ -13,6 +15,7 @@ import {
   isStageClickable,
   getStageRoute,
   canShowReviewButton,
+  shouldPollFlowStatus,
   generateFlowConnections,
 } from '@/lib/version-flow-utils';
 
@@ -26,27 +29,27 @@ export default function VersionFlowPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchStatus = async () => {
+    try {
+      const res = await fetch(`/api/versions/${versionId}/flow-status`);
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      const json = await res.json();
+      setData(json);
+    } catch (err) {
+      console.error('Failed to fetch status:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!router.isReady || typeof versionId !== 'string') return;
-
-    const fetchStatus = async () => {
-      try {
-        const res = await fetch(`/api/versions/${versionId}/flow-status`);
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        const json = await res.json();
-        setData(json);
-      } catch (err) {
-        console.error('Failed to fetch status:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-      } finally {
-        setLoading(false);
-      }
-    };
 
     const interval = setInterval(fetchStatus, 10000);
     fetchStatus();
 
-    return () => clearInterval(interval); // 언마운트 시에는 정리 필요
+    return () => clearInterval(interval);
   }, [router.isReady, versionId]);
 
   const handleStageClick = (key: StageKey) => {
@@ -73,15 +76,17 @@ export default function VersionFlowPage() {
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       setShowModal(false);
 
-      const statusRes = await fetch(`/api/versions/${versionId}/flow-status`);
-      if (statusRes.ok) {
-        const json = await statusRes.json();
-        setData(json);
-      }
+      // 상태 다시 가져오기
+      await fetchStatus();
     } catch (err) {
       console.error('Failed to approve:', err);
       setError(err instanceof Error ? err.message : 'Approval failed');
     }
+  };
+
+  const handleDeployComplete = () => {
+    // 배포 시작 후 상태 다시 가져오기
+    fetchStatus();
   };
 
   if (
@@ -133,6 +138,7 @@ export default function VersionFlowPage() {
                 const rawStatus = (data?.[key as keyof VersionFlowStatus] ??
                   'none') as FlowStatusType;
                 const isApproval = key === 'approveStatus';
+                const isDeploy = key === 'deployStatus';
 
                 return (
                   <div
@@ -141,7 +147,7 @@ export default function VersionFlowPage() {
                     style={{
                       left: `${coord.x}%`,
                       top: `${coord.y}%`,
-                      transform: `translate(-50%, -50%)`,
+                      transform: 'translate(-50%, -50%)',
                     }}
                   >
                     <div className="relative flex flex-col items-center gap-y-1 leading-tight">
@@ -151,6 +157,8 @@ export default function VersionFlowPage() {
                         disabled={!isStageClickable(key, data)}
                         onClick={() => handleStageClick(key)}
                       />
+                      
+                      {/* 승인 버튼 */}
                       {isApproval && (
                         <div className="absolute top-full mt-6 left-1/2 -translate-x-1/2">
                           <button
@@ -164,6 +172,18 @@ export default function VersionFlowPage() {
                           >
                             Review Deployment
                           </button>
+                        </div>
+                      )}
+
+                      {/* 배포 버튼 */}
+                      {isDeploy && (
+                        <div className="absolute top-full mt-6 left-1/2 -translate-x-1/2">
+                          <DeployButton
+                            versionId={Number(versionId)}
+                            approveStatus={data.approveStatus}
+                            deployStatus={data.deployStatus}
+                            onDeployComplete={handleDeployComplete}
+                          />
                         </div>
                       )}
                     </div>
