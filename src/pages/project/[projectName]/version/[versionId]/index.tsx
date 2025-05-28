@@ -13,7 +13,6 @@ import {
   isStageClickable,
   getStageRoute,
   canShowReviewButton,
-  shouldPollFlowStatus,
   generateFlowConnections,
 } from '@/lib/version-flow-utils';
 
@@ -36,10 +35,6 @@ export default function VersionFlowPage() {
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const json = await res.json();
         setData(json);
-
-        if (!shouldPollFlowStatus(json)) {
-          clearInterval(interval);
-        }
       } catch (err) {
         console.error('Failed to fetch status:', err);
         setError(err instanceof Error ? err.message : 'Unknown error');
@@ -51,7 +46,7 @@ export default function VersionFlowPage() {
     const interval = setInterval(fetchStatus, 10000);
     fetchStatus();
 
-    return () => clearInterval(interval);
+    return () => clearInterval(interval); // 언마운트 시에는 정리 필요
   }, [router.isReady, versionId]);
 
   const handleStageClick = (key: StageKey) => {
@@ -146,7 +141,7 @@ export default function VersionFlowPage() {
                     style={{
                       left: `${coord.x}%`,
                       top: `${coord.y}%`,
-                      transform: 'translate(-50%, -50%)',
+                      transform: `translate(-50%, -50%)`,
                     }}
                   >
                     <div className="relative flex flex-col items-center gap-y-1 leading-tight">

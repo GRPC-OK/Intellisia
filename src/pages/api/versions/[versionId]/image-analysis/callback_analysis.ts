@@ -11,12 +11,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // POST 메서드만 허용
   if (req.method !== 'POST') return res.status(405).end('Method Not Allowed')
 
-  // 요청 바디에서 status와 fileUrl 추출 (JSON 바디로 전달됨)
-  const { status, fileUrl } = req.body
-
-  // 쿼리스트링에서 versionId 추출
-  const versionIdRaw = req.query.versionId
+  const { versionId: versionIdRaw, status, fileUrl } = req.body
   const versionId = parseInt(versionIdRaw as string, 10)
+  
 
   // 필수 파라미터 유효성 검증
   if (!versionId || !status || !fileUrl) {

@@ -91,7 +91,7 @@ jobs:
         # [변경] 푸시 성공 여부와 상관없이 빌드 자체 결과만 보고
         if: always() # 빌드 스텝 결과에 따라 항상 알림
         run: |
-          CALLBACK_URL="http://3.35.153.146/api/image-build/callback_build"
+          CALLBACK_URL="http://3.35.153.146/api/versions/[versionId]/image-build/callback_build"
           if [ "${{ steps.build-local.outputs.status }}" = "success" ]; then # [변경] build-local 스텝의 상태 사용
             curl -X POST "$CALLBACK_URL?versionId=${{ github.event.inputs.versionId }}&status=success" # 여기도 versionId로 변경
           else
@@ -113,7 +113,7 @@ jobs:
         run: |
           BUCKET="${{ secrets.S3_BUCKET_NAME }}"
           REGION="${{ secrets.AWS_REGION }}"
-          IMAGE_ANALYSIS_CALLBACK_URL="http://3.35.153.146/api/build-and-scan/callback_analysis"
+          IMAGE_ANALYSIS_CALLBACK_URL="http://3.35.153.146/api/versions/[versionId]/image-analysis/callback_analysis"
 
           SCAN_STATUS="fail"
           TRIVY_FILE="trivy-results.sarif"
@@ -135,7 +135,7 @@ jobs:
           curl -X POST "$IMAGE_ANALYSIS_CALLBACK_URL" \
             -H "Content-Type: application/json" \
             -d '{
-              "versionId": "'${{ github.event.inputs.versionId }}'",
+              "versionId": '${{ github.event.inputs.versionId }}',
               "status": "'$SCAN_STATUS'",
               "fileUrl": "'$PUBLIC_URL'" # S3버킷 URL
             }'

@@ -33,15 +33,6 @@ export async function updateVersionStatusSafelyWithTx(
 
     if (!current) throw new Error('Version not found');
 
-    const shouldUpdateApprove =
-      current.approveStatus === 'none' &&
-      (update.codeStatus ?? current.codeStatus) === 'success' &&
-      (update.imageStatus ?? current.imageStatus) === 'success';
-
-    const nextApproveStatus = shouldUpdateApprove
-      ? 'pending'
-      : (update.approveStatus ?? current.approveStatus);
-
     const result = await tx.version.updateMany({
       where: {
         id: versionId,
@@ -52,7 +43,7 @@ export async function updateVersionStatusSafelyWithTx(
         buildStatus: update.buildStatus ?? current.buildStatus,
         imageStatus: update.imageStatus ?? current.imageStatus,
         deployStatus: update.deployStatus ?? current.deployStatus,
-        approveStatus: nextApproveStatus,
+        approveStatus: update.approveStatus ?? current.approveStatus,
         flowStatus: update.flowStatus ?? current.flowStatus,
       },
     });

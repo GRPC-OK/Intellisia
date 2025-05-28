@@ -50,4 +50,6 @@ export async function handleSemgrepResult(
   await updateVersionStatusSafely(versionId, {
     codeStatus: 'success',
   });
+
+  await updateVersionStatusSafely(versionId, {});
 }

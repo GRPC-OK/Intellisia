@@ -1,7 +1,20 @@
-export default function CodeAnalysisViewer() {
+'use client';
+
+import dynamic from 'next/dynamic';
+
+const Viewer = dynamic(
+  () => import('@microsoft/sarif-web-component').then((mod) => mod.Viewer),
+  { ssr: false }
+);
+
+interface CodeAnalysisViewerProps {
+  sarif: object;
+}
+
+export default function CodeAnalysisViewer({ sarif }: CodeAnalysisViewerProps) {
   return (
-    <div className="mt-6 text-gray-400 text-sm italic">
-      정적 분석 결과 뷰어는 현재 개발 중입니다.
+    <div className="bg-white rounded-xl shadow-md p-6 text-black">
+      <Viewer logs={[sarif]} />
     </div>
   );
 }
