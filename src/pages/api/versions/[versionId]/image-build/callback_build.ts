@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { StepStatus } from '@prisma/client';
+import { StepStatus, FlowStatus } from '@prisma/client';
 import { updateVersionStatusSafely } from '@/services/version-service/version-status-updater.service';
 
 export default async function handler(
@@ -16,25 +16,27 @@ export default async function handler(
   }
 
   try {
-    const enumStatus =
-      status === 'success' ? StepStatus.success : StepStatus.fail;
+    const isSuccess = status === 'success';
+    const stepStatus = isSuccess ? StepStatus.success : StepStatus.fail;
 
-    // 상태 업데이트
+    // buildStatus, imageStatus 업데이트
     await updateVersionStatusSafely(versionId, {
-      buildStatus: enumStatus,
+      buildStatus: stepStatus,
+      imageStatus: stepStatus,
+      flowStatus: isSuccess ? undefined : FlowStatus.fail, // 실패 시 flow도 종료
     });
 
     // 병렬성 대비 보정 호출
-    if (status === 'success') {
+    if (isSuccess) {
       await updateVersionStatusSafely(versionId, {});
     }
 
     return res
       .status(200)
-      .json({ message: 'Build status updated successfully' });
+      .json({ message: 'Build and image status updated successfully' });
   } catch (err: unknown) {
     const message =
-      err instanceof Error ? err.message : 'Failed to update build status';
+      err instanceof Error ? err.message : 'Failed to update status';
     console.error('[image-build-result] DB update error:', message);
     return res.status(500).json({ error: message });
   }
