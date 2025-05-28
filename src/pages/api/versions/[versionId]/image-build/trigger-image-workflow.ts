@@ -10,15 +10,18 @@ export async function triggerImageWorkflow({
   repoUrl: string;
   branch: string;
 }) {
-  const pathParts = new URL(repoUrl).pathname.slice(1).split('/');
-  const owner = pathParts[0];
-  const repo = pathParts[1].replace(/\.git$/, '');
+  // 1. GitHub 레포 경로 분리 및 .git 제거
+  const [owner, rawRepo] = new URL(repoUrl).pathname.slice(1).split('/');
+  const repo = rawRepo.replace(/\.git$/, '');
 
+  // 2. 환경 변수로부터 플랫폼 워크플로우 정보 불러오기
   const PLATFORM_WORKFLOW_OWNER = process.env.WORKFLOW_REPO_OWNER!;
   const PLATFORM_WORKFLOW_REPO = process.env.WORKFLOW_REPO_NAME!;
   const PLATFORM_WORKFLOW_REF = process.env.WORKFLOW_REF!;
+  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL!;
 
   try {
+    // 3. GitHub Actions 워크플로우 dispatch
     const res = await fetch(
       `https://api.github.com/repos/${PLATFORM_WORKFLOW_OWNER}/${PLATFORM_WORKFLOW_REPO}/actions/workflows/image_build_and_scan.yml/dispatches`,
       {
@@ -33,6 +36,7 @@ export async function triggerImageWorkflow({
             versionId: versionId.toString(),
             repo: `${owner}/${repo}`,
             ref: branch,
+            baseUrl: BASE_URL,
           },
         }),
       }
@@ -44,6 +48,7 @@ export async function triggerImageWorkflow({
   } catch (err) {
     console.error('[Image Build 트리거 실패]', err);
 
+    // 4. 실패 시 DB에 상태 반영
     await prisma.$transaction(async (tx) => {
       await updateVersionStatusSafelyWithTx(tx, versionId, {
         imageStatus: 'fail',
