@@ -35,6 +35,11 @@ export default function VersionFlowPage() {
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const json = await res.json();
       setData(json);
+
+      // 폴링 중단 조건 확인 (성능 최적화)
+      if (!shouldPollFlowStatus(json)) {
+        return; // 배포 완료되면 폴링 중단
+      }
     } catch (err) {
       console.error('Failed to fetch status:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
