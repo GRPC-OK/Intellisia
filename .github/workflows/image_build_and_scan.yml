@@ -10,7 +10,7 @@ on:
       ref:
         required: true
       baseUrl:
-        required: true  # ex: https://your.backend.com
+        required: true  
 
 jobs:
   image-build-and-scan:
