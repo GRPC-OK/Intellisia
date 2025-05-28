@@ -8,15 +8,18 @@ import CodeAnalysisViewer from '@/components/code-analysis/CodeAnalysisViewer';
 import CodeAnalysisEmptyView from '@/components/code-analysis/CodeAnalysisEmptyView';
 import CodeAnalysisErrorView from '@/components/code-analysis/CodeAnalysisErrorView';
 
-interface AnalysisStatus {
-  status: 'failed' | 'passed_with_issues' | 'passed' | 'pending' | 'none';
-}
+type AnalysisStatus =
+  | 'failed'
+  | 'passed_with_issues'
+  | 'passed_no_issues'
+  | 'pending'
+  | 'none';
 
 export default function CodeAnalysisPage() {
   const router = useRouter();
   const { versionId, projectName } = router.query;
 
-  const [status, setStatus] = useState<AnalysisStatus['status'] | null>(null);
+  const [status, setStatus] = useState<AnalysisStatus | null>(null);
   const [sarifData, setSarifData] = useState<object | null>(null);
   const [logText, setLogText] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,11 +29,18 @@ export default function CodeAnalysisPage() {
 
     const fetchData = async () => {
       try {
-        const statusRes = await fetch(
-          `/api/versions/${versionId}/code-analysis/status`
+        const res = await fetch(
+          `/api/versions/${versionId}/code-analysis/result`
         );
-        if (!statusRes.ok) throw new Error('상태 조회 실패');
-        const { status }: AnalysisStatus = await statusRes.json();
+        if (!res.ok) throw new Error('분석 결과 요청 실패');
+
+        const data: {
+          status: AnalysisStatus;
+          sarif?: object;
+          logText?: string;
+        } = await res.json();
+
+        const { status, sarif, logText } = data;
 
         if (status === 'pending' || status === 'none') {
           router.push(`/project/${projectName}/version/${versionId}`);
@@ -38,34 +48,8 @@ export default function CodeAnalysisPage() {
         }
 
         setStatus(status);
-
-        if (status === 'failed') {
-          const logRes = await fetch(
-            `/api/versions/${versionId}/code-analysis/log`
-          );
-          const log = await logRes.text();
-          setLogText(log);
-        }
-
-        if (status === 'passed_with_issues') {
-          const sarifRes = await fetch(
-            `/api/versions/${versionId}/code-analysis/sarif`
-          );
-          if (!sarifRes.ok) throw new Error('SARIF 불러오기 실패');
-          const sarifJson = await sarifRes.json();
-          setSarifData(sarifJson);
-        }
-
-        if (status === 'passed') {
-          const sarifRes = await fetch(
-            `/api/versions/${versionId}/code-analysis/sarif`
-          );
-          const sarifJson = await sarifRes.json();
-          if (sarifJson.runs && sarifJson.runs.length > 0) {
-            setSarifData(sarifJson);
-            setStatus('passed_with_issues');
-          }
-        }
+        setSarifData(sarif ?? null);
+        setLogText(logText ?? null);
       } catch (err) {
         console.error('분석 결과 처리 중 오류:', err);
       } finally {
@@ -100,7 +84,7 @@ export default function CodeAnalysisPage() {
           <CodeAnalysisViewer sarif={sarifData} />
         )}
 
-        {!loading && status === 'passed' && <CodeAnalysisEmptyView />}
+        {!loading && status === 'passed_no_issues' && <CodeAnalysisEmptyView />}
       </div>
     </>
   );
