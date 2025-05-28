@@ -1,14 +1,7 @@
-<<<<<<< HEAD
-// src/pages/api/versions/[versionId]/approval-decision.ts (수정된 버전)
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { updateVersionStatusSafely } from '@/services/version-service/version-status-updater.service';
 import { triggerDeploymentWorkflow } from '@/services/deployment-service/trigger-deployment-workflow';
 import prisma from '@/lib/prisma';
-=======
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { updateVersionStatusSafely } from '@/services/version-service/version-status-updater.service';
-import { triggerDeploymentAfterApproval } from '@/application/trigger-deployment-after-approval';
->>>>>>> e383dde (feat: 배포 승인 시 approval API 호출 및 flow 상태 갱신 로직 추가)
 
 export default async function handler(
   req: NextApiRequest,
@@ -44,7 +37,7 @@ export default async function handler(
     }
 
     // 🆕 승인된 경우: 배포까지 자동 실행
-    
+
     // 1. 버전 정보 조회 (배포에 필요한 데이터)
     const version = await prisma.version.findUnique({
       where: { id: versionId },
@@ -81,7 +74,7 @@ export default async function handler(
     });
   } catch (error) {
     console.error('[APPROVAL AND DEPLOY ERROR]', error);
-    
+
     // 에러 발생 시 상태 롤백
     await updateVersionStatusSafely(versionId, {
       approveStatus: 'pending', // 승인 상태 되돌리기
