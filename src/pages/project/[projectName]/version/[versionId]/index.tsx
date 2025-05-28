@@ -1,4 +1,3 @@
-// src/pages/project/[projectName]/version/[versionId]/index.tsx (업데이트)
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
@@ -6,7 +5,6 @@ import { useRouter } from 'next/router';
 import FlowStage, { FlowStatusType } from '@/components/version/FlowStage';
 import FlowConnector from '@/components/version/FlowConnector';
 import ApprovalModal from '@/components/version/ApprovalModal';
-import DeployButton from '@/components/version/DeployButton';
 import VersionHeader from '@/components/version/VersionHeader';
 import { VersionFlowStatus } from '@/types/version-flow';
 import {
@@ -81,17 +79,13 @@ export default function VersionFlowPage() {
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       setShowModal(false);
 
-      // 상태 다시 가져오기
+      // 승인 후 즉시 상태 업데이트 (배포 시작됨)
       await fetchStatus();
+      
     } catch (err) {
       console.error('Failed to approve:', err);
       setError(err instanceof Error ? err.message : 'Approval failed');
     }
-  };
-
-  const handleDeployComplete = () => {
-    // 배포 시작 후 상태 다시 가져오기
-    fetchStatus();
   };
 
   if (
@@ -180,15 +174,23 @@ export default function VersionFlowPage() {
                         </div>
                       )}
 
-                      {/* 배포 버튼 */}
-                      {isDeploy && (
+                      {/* 배포 상태 표시만 (버튼 제거) */}
+                      {isDeploy && data.approveStatus === 'approved' && (
                         <div className="absolute top-full mt-6 left-1/2 -translate-x-1/2">
-                          <DeployButton
-                            versionId={Number(versionId)}
-                            approveStatus={data.approveStatus}
-                            deployStatus={data.deployStatus}
-                            onDeployComplete={handleDeployComplete}
-                          />
+                          <div className={`px-4 py-2 rounded-lg text-sm font-semibold ${
+                            data.deployStatus === 'success' 
+                              ? 'bg-green-600 text-white' 
+                              : data.deployStatus === 'pending'
+                              ? 'bg-yellow-600 text-white'
+                              : data.deployStatus === 'fail'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-gray-600 text-gray-300'
+                          }`}>
+                            {data.deployStatus === 'success' && '✅ 배포 완료'}
+                            {data.deployStatus === 'pending' && '⏳ 배포 진행 중'}
+                            {data.deployStatus === 'fail' && '❌ 배포 실패'}
+                            {data.deployStatus === 'none' && '⏸️ 배포 대기'}
+                          </div>
                         </div>
                       )}
                     </div>
