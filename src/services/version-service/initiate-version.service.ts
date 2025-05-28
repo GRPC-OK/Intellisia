@@ -125,9 +125,13 @@ export async function initiateVersionInsideTx(
   });
 
   return await createVersionWithAutoName(tx, project.id, {
-    description: `"${branch}" 브랜치 실행 (최소 기능)`,
+    // 기존: `"${branch}" 브랜치 실행 (최소 기능)`
+    // 개선: 사용자 친화적인 설명
+    description: `${branch} 브랜치에서 배포된 버전입니다`,
     isCurrent: false,
-    imageTag: 'pending-build',
+    // 기존: 'pending-build'
+    // 개선: 더 자연스러운 표현
+    imageTag: 'v-building',
     branch,
     commitHash: targetCommitSha,
     project: { connect: { id: project.id } },
