@@ -1,6 +1,6 @@
 // src/pages/api/image-analysis/callback_analysis.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import prisma from '@/lib/prisma';
+import prisma from '@/lib/prisma'; // Prisma 클라이언트 import 추가 (누락되었을 수도 있음)
 import { updateVersionStatusSafely } from '@/services/version-service/version-status-updater.service';
 
 export default async function handler(
@@ -15,23 +15,24 @@ export default async function handler(
     const { status, fileUrl } = req.body;
 
     if (!status || !fileUrl) {
-      return res.status(400).json({ 
-        message: 'Missing required fields: status, fileUrl' 
+      return res.status(400).json({
+        message: 'Missing required fields: status, fileUrl'
       });
     }
 
     // URL에서 versionId 추출 (예: version-123/trivy-results.sarif)
     const versionIdMatch = fileUrl.match(/version-(\d+)\//);
-    if (!versionIdMatch) {
-      return res.status(400).json({ 
-        message: 'Cannot extract versionId from fileUrl' 
+    if (!versionIdMatch) { // 매치되는 부분이 없을 경우
+      return res.status(400).json({
+        message: 'Cannot extract versionId from fileUrl'
       });
     }
 
+    // versionIdMatch[1]을 사용해야 해. (첫 번째 캡처 그룹)
     const versionId = parseInt(versionIdMatch[1], 10);
     if (isNaN(versionId)) {
-      return res.status(400).json({ 
-        message: 'Invalid versionId extracted from fileUrl' 
+      return res.status(400).json({
+        message: 'Invalid versionId extracted from fileUrl'
       });
     }
 
@@ -70,7 +71,7 @@ export default async function handler(
       console.log(`[FAIL] Image analysis failed for version ${versionId}: ${fileUrl}`);
     }
 
-    return res.status(200).json({ 
+    return res.status(200).json({
       message: 'Image analysis callback processed successfully',
       versionId,
       status,
@@ -78,7 +79,7 @@ export default async function handler(
 
   } catch (error) {
     console.error('[IMAGE ANALYSIS CALLBACK ERROR]', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       message: 'Failed to process image analysis callback',
       error: String(error),
     });
