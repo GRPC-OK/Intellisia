@@ -26,7 +26,7 @@ export async function triggerDeploymentWorkflow({
     {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.ENV}`,
+        Authorization: `Bearer ${process.env.INTELLISIA_GITHUB_TOKEN}`,
         Accept: 'application/vnd.github+json',
       },
       body: JSON.stringify({
