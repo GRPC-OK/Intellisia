@@ -53,5 +53,9 @@ export async function startFullFlow(
     console.error('[ERROR] 이미지 빌드 트리거 실패:', err);
   });
 
+
+  
+
+
   return version;
 }
