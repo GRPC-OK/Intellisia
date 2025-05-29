@@ -9,11 +9,17 @@ export default async function handler(
 ) {
   if (req.method !== 'POST') return res.status(405).end('Method Not Allowed');
 
-  const { versionId: versionIdRaw, status, fileUrl } = req.body;
-  const versionId = parseInt(versionIdRaw as string, 10);
+  const { status, fileUrl, versionId } = req.body;
 
-  if (!versionId || !status || !fileUrl) {
-    return res.status(400).json({ error: 'Missing parameters' });
+  if (!status || !fileUrl || !versionId) {
+    return res.status(400).json({
+      message: 'Missing required fields: status, fileUrl, versionId',
+    });
+  }
+
+  const parsedVersionId = parseInt(versionId, 10);
+  if (isNaN(parsedVersionId)) {
+    return res.status(400).json({ message: 'Invalid versionId' });
   }
 
   try {
@@ -22,22 +28,29 @@ export default async function handler(
     const flowStatus: FlowStatus | undefined = isSuccess ? undefined : 'fail';
 
     await prisma.version.update({
-      where: { id: versionId },
+      where: { id: parsedVersionId },
       data: {
         imageAnalysisS3Url: fileUrl,
+        imageStatus,
       },
     });
 
-    await updateVersionStatusSafely(versionId, {
+    await updateVersionStatusSafely(parsedVersionId, {
       imageStatus,
       ...(flowStatus && { flowStatus }),
     });
 
     return res.status(200).json({
-      message: `Image analysis result updated for versionId ${versionId}`,
+      message: 'Image analysis callback processed successfully',
+      versionId: parsedVersionId,
+      status,
     });
-  } catch (err) {
-    console.error('[callback_analysis.ts] DB update error:', err);
-    return res.status(500).json({ error: 'Internal Server Error' });
+
+  } catch (error) {
+    console.error('[IMAGE ANALYSIS CALLBACK ERROR]', error);
+    return res.status(500).json({
+      message: 'Failed to process image analysis callback',
+      error: String(error),
+    });
   }
 }

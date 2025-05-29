@@ -19,10 +19,9 @@ export default async function handler(
     const isSuccess = status === 'success';
     const stepStatus = isSuccess ? StepStatus.success : StepStatus.fail;
 
-    // buildStatus, imageStatus 업데이트
+    // buildStatus만 업데이트, 실패 시 flowStatus도 종료 처리리
     await updateVersionStatusSafely(versionId, {
       buildStatus: stepStatus,
-      imageStatus: stepStatus,
       flowStatus: isSuccess ? undefined : FlowStatus.fail, // 실패 시 flow도 종료
     });
 
@@ -33,7 +32,7 @@ export default async function handler(
 
     return res
       .status(200)
-      .json({ message: 'Build and image status updated successfully' });
+      .json({ message: 'Build status updated successfully' });
   } catch (err: unknown) {
     const message =
       err instanceof Error ? err.message : 'Failed to update status';
