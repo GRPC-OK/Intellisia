@@ -85,17 +85,11 @@ export default function VersionFlowPage() {
 
       setShowModal(false);
 
-<<<<<<< HEAD
-      // 승인 후 즉시 상태 업데이트 (배포 시작됨)
-      await fetchStatus();
-      
-=======
       const statusRes = await fetch(`/api/versions/${versionId}/flow-status`);
       if (statusRes.ok) {
         const json = await statusRes.json();
         setData(json);
       }
->>>>>>> e383dde (feat: 배포 승인 시 approval API 호출 및 flow 상태 갱신 로직 추가)
     } catch (err) {
       console.error('Failed to approve:', err);
       setError(err instanceof Error ? err.message : 'Approval failed');
@@ -184,29 +178,6 @@ export default function VersionFlowPage() {
                           </button>
                         </div>
                       )}
-<<<<<<< HEAD
-
-                      {/* 배포 상태 표시만 (버튼 제거) */}
-                      {isDeploy && data.approveStatus === 'approved' && (
-                        <div className="absolute top-full mt-6 left-1/2 -translate-x-1/2">
-                          <div className={`px-4 py-2 rounded-lg text-sm font-semibold ${
-                            data.deployStatus === 'success' 
-                              ? 'bg-green-600 text-white' 
-                              : data.deployStatus === 'pending'
-                              ? 'bg-yellow-600 text-white'
-                              : data.deployStatus === 'fail'
-                              ? 'bg-red-600 text-white'
-                              : 'bg-gray-600 text-gray-300'
-                          }`}>
-                            {data.deployStatus === 'success' && '✅ 배포 완료'}
-                            {data.deployStatus === 'pending' && '⏳ 배포 진행 중'}
-                            {data.deployStatus === 'fail' && '❌ 배포 실패'}
-                            {data.deployStatus === 'none' && '⏸️ 배포 대기'}
-                          </div>
-                        </div>
-                      )}
-=======
->>>>>>> e383dde (feat: 배포 승인 시 approval API 호출 및 flow 상태 갱신 로직 추가)
                     </div>
                   </div>
                 );
