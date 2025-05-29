@@ -16,7 +16,7 @@ export const isStageClickable = (
   key: StageKey,
   data: VersionFlowStatus
 ): boolean => {
-  if (key === 'approveStatus') return false;
+  if (key === 'approveStatus' || key === 'buildStatus') return false;
   const status = data[key];
   return status === 'success' || status === 'fail';
 };
@@ -27,7 +27,7 @@ export const getStageRoute = (
   versionId: string
 ): string => {
   const pathMap: Record<StageKey, string | undefined> = {
-    buildStatus: 'image-build',
+    buildStatus: undefined, // 클릭해도 경로 없음
     imageStatus: 'image-analysis',
     codeStatus: 'code-analysis',
     approveStatus: undefined,

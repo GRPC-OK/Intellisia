@@ -33,7 +33,9 @@ export default async function handler(
 
     // 2. 승인 상태 확인
     if (version.approveStatus !== 'approved') {
-      return res.status(400).json({ message: '승인되지 않은 버전은 배포할 수 없습니다' });
+      return res
+        .status(400)
+        .json({ message: '승인되지 않은 버전은 배포할 수 없습니다' });
     }
 
     // 3. 배포 상태를 pending으로 업데이트
@@ -50,15 +52,14 @@ export default async function handler(
       helmValues: version.helmValues?.content,
     });
 
-    return res.status(200).json({ 
+    return res.status(200).json({
       message: '배포가 시작되었습니다',
       versionId,
-      status: 'pending'
+      status: 'pending',
     });
-
   } catch (error) {
     console.error('[DEPLOYMENT ERROR]', error);
-    
+
     // 에러 발생 시 배포 상태를 실패로 업데이트
     await updateVersionStatusSafely(versionId, {
       deployStatus: 'fail',
@@ -71,3 +72,5 @@ export default async function handler(
     });
   }
 }
+
+/* 사용하지 않는 api 입니다. 수동 배포 할 수 있게 하는 api */
