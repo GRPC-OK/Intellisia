@@ -1,12 +1,17 @@
-'use client';
-
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import VersionHeader from '@/components/version/VersionHeader';
+import { useEffect, useState } from 'react';
 
 export default function DeploymentExecutedPage() {
   const router = useRouter();
-  const { versionId, projectName } = router.query;
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    if (router.isReady) {
+      setIsReady(true);
+    }
+  }, [router.isReady]);
 
   const handleDeploymentCheck = () => {
     window.open(
@@ -14,6 +19,10 @@ export default function DeploymentExecutedPage() {
       '_blank'
     );
   };
+
+  if (!isReady) {
+    return null;
+  }
 
   return (
     <>
