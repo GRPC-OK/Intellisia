@@ -124,7 +124,7 @@ export default function Dashboard() {
         <div className={styles.btnGroup}>
           {/* 프로젝트 등록(생성) 버튼 */}
           <button className={styles.createBtn} onClick={handleNewProject}>
-            프로젝트 등록
+            Create New Project
           </button>
         </div>
       </main>
