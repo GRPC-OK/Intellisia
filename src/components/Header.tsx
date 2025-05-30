@@ -9,9 +9,6 @@ export default function Header() {
       <div className={styles.logo}>
         <button onClick={() => router.push('/dashboard')}>Intellisia🥕</button>
       </div>
-      <div className={styles.navRight}>
-        <div className={styles.profile}></div>
-      </div>
     </nav>
   );
 }
