@@ -24,6 +24,12 @@ jobs:
           git clone --branch ${{ github.event.inputs.ref }} \
             https://$GH_TOKEN@github.com/${{ github.event.inputs.repo }} target-repo
 
+      - name: Get commit hash
+        id: commit
+        run: |
+          cd target-repo
+          echo "COMMIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -31,10 +37,10 @@ jobs:
         id: build-local
         run: |
           cd target-repo
-          LOCAL_IMAGE_TAG="local-my-app:${{ github.event.inputs.versionId }}"
-          if docker build -t "$LOCAL_IMAGE_TAG" .; then
+          IMAGE_TAG="local-my-app:${{ steps.commit.outputs.COMMIT_HASH }}"
+          if docker build -t "$IMAGE_TAG" .; then
             echo "status=success" >> $GITHUB_OUTPUT
-            echo "local_image_tag=$LOCAL_IMAGE_TAG" >> $GITHUB_OUTPUT
+            echo "local_image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
           else
             echo "status=fail" >> $GITHUB_OUTPUT
           fi
@@ -59,15 +65,13 @@ jobs:
         if: success() && steps.trivy_scan.outcome == 'success'
         id: push-to-hub
         run: |
-          LOCAL_IMAGE_TAG="${{ steps.build-local.outputs.local_image_tag }}"
-          DOCKERHUB_REPOSITORY_NAME="${{ secrets.DOCKERHUB_USERNAME }}/my-app"
-          DOCKERHUB_IMAGE_URI="$DOCKERHUB_REPOSITORY_NAME:${{ github.event.inputs.versionId }}"
-          docker tag "$LOCAL_IMAGE_TAG" "$DOCKERHUB_IMAGE_URI"
-          if docker push "$DOCKERHUB_IMAGE_URI"; then
-            docker tag "$DOCKERHUB_IMAGE_URI" "$DOCKERHUB_REPOSITORY_NAME:latest"
-            docker push "$DOCKERHUB_REPOSITORY_NAME:latest"
+          IMAGE_TAG="seaproject/my-app:${{ steps.commit.outputs.COMMIT_HASH }}"
+          docker tag "${{ steps.build-local.outputs.local_image_tag }}" "$IMAGE_TAG"
+          if docker push "$IMAGE_TAG"; then
+            docker tag "$IMAGE_TAG" "seaproject/my-app:latest"
+            docker push "seaproject/my-app:latest"
             echo "status=success" >> $GITHUB_OUTPUT
-            echo "image_tag=$DOCKERHUB_IMAGE_URI" >> $GITHUB_OUTPUT
+            echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
           else
             echo "status=fail" >> $GITHUB_OUTPUT
           fi
@@ -94,14 +98,15 @@ jobs:
       - name: Upload Trivy Results to S3 and Notify Backend
         if: always()
         run: |
+          VERSION_ID="${{ github.event.inputs.versionId }}"
           BUCKET="${{ secrets.S3_BUCKET_NAME }}"
           REGION="${{ secrets.AWS_REGION }}"
-          IMAGE_ANALYSIS_CALLBACK_URL="${{ github.event.inputs.baseUrl }}/api/versions/${{ github.event.inputs.versionId }}/image-analysis/callback_analysis"
+          IMAGE_ANALYSIS_CALLBACK_URL="${{ github.event.inputs.baseUrl }}/api/versions/${VERSION_ID}/image-analysis/callback_analysis"
 
-          SCAN_STATUS="fail"
           TRIVY_FILE="trivy-results.sarif"
-          TARGET_PATH="image-analysis/version-${{ github.event.inputs.versionId }}/$TRIVY_FILE"
+          TARGET_PATH="image-analysis/version-${VERSION_ID}/$TRIVY_FILE"
           PUBLIC_URL=""
+          SCAN_STATUS="fail"
 
           if [ -f "$TRIVY_FILE" ]; then
             aws s3 cp "$TRIVY_FILE" "s3://$BUCKET/$TARGET_PATH"
@@ -110,13 +115,8 @@ jobs:
             SCAN_STATUS="success"
           else
             echo "Trivy results file not found, assuming scan failure."
-            SCAN_STATUS="fail"
           fi
 
           curl -X POST "$IMAGE_ANALYSIS_CALLBACK_URL" \
             -H "Content-Type: application/json" \
-            -d '{
-              "versionId": '${{ github.event.inputs.versionId }}',
-              "status": "'$SCAN_STATUS'",
-              "fileUrl": "'$PUBLIC_URL'"
-            }'
+            -d "{\"versionId\": $VERSION_ID, \"status\": \"$SCAN_STATUS\", \"fileUrl\": \"$PUBLIC_URL\"}"
