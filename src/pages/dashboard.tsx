@@ -415,35 +415,6 @@ export default function Dashboard() {
           </button>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer style={{
-        backgroundColor: '#0d1117',
-        color: '#8b949e',
-        padding: '20px',
-        fontSize: '14px',
-        textAlign: 'center'
-      }}>
-        <div style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-          gap: '12px',
-          marginBottom: '8px'
-        }}>
-          <a href="#" style={{ color: '#8b949e', textDecoration: 'none' }}>Terms</a>
-          <a href="#" style={{ color: '#8b949e', textDecoration: 'none' }}>Privacy</a>
-          <a href="#" style={{ color: '#8b949e', textDecoration: 'none' }}>Security</a>
-          <a href="#" style={{ color: '#8b949e', textDecoration: 'none' }}>Status</a>
-          <a href="#" style={{ color: '#8b949e', textDecoration: 'none' }}>Docs</a>
-          <a href="#" style={{ color: '#8b949e', textDecoration: 'none' }}>Contact</a>
-          <a href="#" style={{ color: '#8b949e', textDecoration: 'none' }}>Manage cookies</a>
-          <a href="#" style={{ color: '#8b949e', textDecoration: 'none' }}>Do not share my personal information</a>
-        </div>
-        <div style={{ color: '#8b949e' }}>
-          <span>© 2025 Intellisia, Inc.</span>
-        </div>
-      </footer>
     </div>
   );
 }
