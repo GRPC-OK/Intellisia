@@ -15,10 +15,14 @@ on:
       domain:
         required: true
         type: string
+      helmValues:
+        required: true
+        type: string
 
 jobs:
   deploy-to-argocd:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout ArgoCD Apps Repository
         uses: actions/checkout@v4
@@ -27,42 +31,22 @@ jobs:
           token: ${{ secrets.INTELLISIA_GITHUB_TOKEN }}
           path: argocd-apps
 
-      - name: Create or Update Helm Values
+      - name: Apply Helm Values from backend
         run: |
           PROJECT_DIR="argocd-apps/helm-projects/${{ inputs.projectName }}"
-          
-          # 프로젝트 디렉터리가 없으면 생성
           mkdir -p "$PROJECT_DIR"
-          
-          # values.yaml 생성/업데이트
-          cat > "$PROJECT_DIR/values.yaml" << EOF
-          replicaCount: 1
-          image:
-            repository: "seaproject/my-app"
-            tag: "${{ inputs.imageTag }}"
-            pullPolicy: IfNotPresent
-          host: "${{ inputs.domain }}"
-          port: 3000
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "200m"
-              memory: "256Mi"
-          EOF
+          echo '${{ inputs.helmValues }}' | jq '.' > "$PROJECT_DIR/values.yaml"
 
       - name: Commit and Push Changes
         run: |
           cd argocd-apps
           git config user.name "Intellisia Deploy Bot"
           git config user.email "deploy-bot@intellisia.com"
-          
           git add helm-projects/${{ inputs.projectName }}/values.yaml
           git commit -m "Deploy ${{ inputs.projectName }} version ${{ inputs.imageTag }}"
           git push origin main
 
-      - name: Update Deployment Status
+      - name: Update Deployment Status to Backend
         if: always()
         run: |
           if [ "${{ job.status }}" == "success" ]; then
@@ -70,5 +54,5 @@ jobs:
           else
             STATUS="fail"
           fi
-          
+
           curl -X POST "${{ secrets.API_BASE_URL }}/api/deployment/callback?versionId=${{ inputs.versionId }}&status=$STATUS"
