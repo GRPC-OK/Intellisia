@@ -13,15 +13,24 @@ export async function triggerDeploymentAfterApproval(versionId: number) {
 
   await updateVersionStatusSafely(versionId, {
     deployStatus: 'pending',
+    flowStatus: 'pending',
   });
 
   try {
+    const mergedHelmValues = {
+      ...((version.helmValues?.content ?? {}) as Record<string, unknown>),
+      image: {
+        repository: `seaproject/${version.project.name}`,
+        tag: version.imageTag,
+        pullPolicy: 'IfNotPresent',
+      },
+    };
     await triggerDeploymentWorkflow({
       versionId,
       projectName: version.project.name,
       imageTag: version.imageTag,
       domain: version.project.domain,
-      helmValues: version.helmValues?.content,
+      helmValues: mergedHelmValues,
     });
   } catch (err) {
     await updateVersionStatusSafely(versionId, {
