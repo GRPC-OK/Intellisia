@@ -18,6 +18,9 @@ export async function triggerDeploymentWorkflow({
   const PLATFORM_WORKFLOW_OWNER = process.env.WORKFLOW_REPO_OWNER!;
   const PLATFORM_WORKFLOW_REPO = process.env.WORKFLOW_REPO_NAME!;
   const PLATFORM_WORKFLOW_REF = process.env.WORKFLOW_REF!;
+  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL!;
+
+  const callbackUrl = `${BASE_URL}/api/versions/${versionId}/deployment`;
 
   const url = `https://api.github.com/repos/${PLATFORM_WORKFLOW_OWNER}/${PLATFORM_WORKFLOW_REPO}/actions/workflows/deploy.yml/dispatches`;
 
@@ -28,6 +31,7 @@ export async function triggerDeploymentWorkflow({
       projectName,
       imageTag,
       domain,
+      callbackUrl,
       helmValues: helmValues ? JSON.stringify(helmValues) : '{}',
     },
   };

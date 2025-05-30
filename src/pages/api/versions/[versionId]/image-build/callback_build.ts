@@ -23,6 +23,7 @@ export default async function handler(
 
     await updateVersionStatusSafely(versionId, {
       buildStatus: stepStatus,
+      imageStatus: isSuccess ? StepStatus.pending : undefined,
       flowStatus: isSuccess ? undefined : FlowStatus.fail,
     });
 
