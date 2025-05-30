@@ -1,5 +1,3 @@
-// 2. src/pages/project/[projectName]/version/[versionId]/index.tsx
-
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -45,7 +43,7 @@ const stageConfig = {
 };
 
 // 상태별 설명 생성
-const getStageDescription = (key: keyof typeof stageConfig, status: string, data?: VersionFlowStatus) => {
+const getStageDescription = (key: keyof typeof stageConfig, status: string) => {
   const base = stageConfig[key].baseDescription;
   
   switch (status) {
@@ -254,7 +252,7 @@ export default function VersionFlowPage() {
               <PipelineCard
                 key={key}
                 title={config.title}
-                description={getStageDescription(key, status, data)}
+                description={getStageDescription(key, status)}
                 status={status}
                 estimatedTime={status === 'pending' ? getEstimatedTime(key) : undefined}
                 completedTime={status === 'success' || status === 'approved' ? '방금 전' : undefined}
