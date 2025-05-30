@@ -1,61 +1,52 @@
-name: Deploy to ArgoCD
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { updateVersionStatusSafely } from '@/services/version-service/version-status-updater.service';
 
-on:
-  workflow_dispatch:
-    inputs:
-      versionId:
-        required: true
-        type: string
-      projectName:
-        required: true
-        type: string
-      imageTag:
-        required: true
-        type: string
-      domain:
-        required: true
-        type: string
-      helmValues:
-        required: true
-        type: string
-      callbackUrl:
-        required: true
-        type: string
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method Not Allowed' });
+  }
 
-jobs:
-  deploy-to-argocd:
-    runs-on: ubuntu-latest
+  const { versionId, status } = req.query;
 
-    steps:
-      - name: Checkout ArgoCD Apps Repository
-        uses: actions/checkout@v4
-        with:
-          repository: GRPC-OK/argocd-apps
-          token: ${{ secrets.INTELLISIA_GITHUB_TOKEN }}
-          path: argocd-apps
+  if (!versionId || !status) {
+    return res.status(400).json({ message: 'Missing versionId or status' });
+  }
 
-      - name: Apply Helm Values from backend
-        run: |
-          PROJECT_DIR="argocd-apps/helm-projects/${{ inputs.projectName }}"
-          mkdir -p "$PROJECT_DIR"
-          echo '${{ inputs.helmValues }}' | jq '.' > "$PROJECT_DIR/values.yaml"
+  const versionIdNum = Number(versionId);
+  if (isNaN(versionIdNum)) {
+    return res.status(400).json({ message: 'Invalid versionId' });
+  }
 
-      - name: Commit and Push Changes
-        run: |
-          cd argocd-apps
-          git config user.name "Intellisia Deploy Bot"
-          git config user.email "deploy-bot@intellisia.com"
-          git add helm-projects/${{ inputs.projectName }}/values.yaml
-          git commit -m "Deploy ${{ inputs.projectName }} version ${{ inputs.imageTag }}"
-          git push origin main
+  if (!['success', 'fail'].includes(status as string)) {
+    return res.status(400).json({ message: 'Invalid status' });
+  }
 
-      - name: Update Deployment Status to Backend
-        if: always()
-        run: |
-          if [ "${{ job.status }}" == "success" ]; then
-            STATUS="success"
-          else
-            STATUS="fail"
-          fi
+  try {
+    const deployStatus = status === 'success' ? 'success' : 'fail';
+    const flowStatus = status === 'success' ? 'success' : 'fail';
 
-          curl -X POST "${{ inputs.callbackUrl }}?status=$STATUS"
+    await updateVersionStatusSafely(versionIdNum, {
+      deployStatus,
+      flowStatus,
+    });
+
+    console.log(
+      `[DEPLOYMENT CALLBACK] versionId=${versionId}, status=${status}`
+    );
+
+    return res.status(200).json({
+      message: '배포 결과가 성공적으로 업데이트되었습니다',
+      versionId: versionIdNum,
+      status: deployStatus,
+    });
+  } catch (error) {
+    console.error('[DEPLOYMENT CALLBACK ERROR]', error);
+    return res.status(500).json({
+      message: '배포 결과 업데이트 실패',
+      error: String(error),
+    });
+  }
+}
