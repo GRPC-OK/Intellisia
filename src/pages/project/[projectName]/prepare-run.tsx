@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 interface FormData {
   newBranchName: string;
   helmReplicaCount: string;
-  containerPort: string;
+  port: string;
   cpuRequest: string;
   memoryRequest: string;
 }
@@ -12,7 +12,7 @@ interface FormData {
 interface FormErrors {
   newBranchName?: string;
   helmReplicaCount?: string;
-  containerPort?: string;
+  port?: string;
   cpuRequest?: string;
   memoryRequest?: string;
   apiError?: string;
@@ -25,7 +25,7 @@ const PrepareRunPage: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
     newBranchName: 'main',
     helmReplicaCount: '1',
-    containerPort: '8080',
+    port: '8080',
     cpuRequest: '100m',
     memoryRequest: '128Mi',
   });
@@ -51,9 +51,9 @@ const PrepareRunPage: React.FC = () => {
     if (isNaN(replicaCount) || replicaCount < 0)
       newErrors.helmReplicaCount = '레플리카 수는 0 이상의 숫자여야 합니다.';
 
-    const port = parseInt(formData.containerPort, 10);
+    const port = parseInt(formData.port, 10);
     if (isNaN(port) || port <= 0 || port > 65535)
-      newErrors.containerPort = '1~65535 사이의 포트를 입력하세요.';
+      newErrors.port = '1~65535 사이의 포트를 입력하세요.';
 
     const cpuRegex = /^\d+(\.\d+)?m?$|^\d+(\.\d+)?$/;
     if (!formData.cpuRequest.trim()) {
@@ -95,7 +95,7 @@ const PrepareRunPage: React.FC = () => {
       dockerfilePath: './Dockerfile',
       helmValueOverrides: {
         replicaCount: parseInt(formData.helmReplicaCount, 10),
-        containerPort: parseInt(formData.containerPort, 10),
+        port: parseInt(formData.port, 10),
         resources: {
           requests: {
             cpu: formData.cpuRequest,
@@ -192,7 +192,7 @@ const PrepareRunPage: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           {renderInput('newBranchName', '브랜치 이름')}
           {renderInput('helmReplicaCount', '레플리카 수', 'number')}
-          {renderInput('containerPort', '애플리케이션 포트', 'number')}
+          {renderInput('port', '애플리케이션 포트', 'number')}
           {renderInput('cpuRequest', 'CPU 요청')}
           {renderInput('memoryRequest', '메모리 요청')}
 

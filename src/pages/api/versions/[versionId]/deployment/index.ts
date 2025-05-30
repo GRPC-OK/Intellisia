@@ -1,4 +1,3 @@
-// src/pages/api/deployment/callback.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { updateVersionStatusSafely } from '@/services/version-service/version-status-updater.service';
 
@@ -34,14 +33,15 @@ export default async function handler(
       flowStatus,
     });
 
-    console.log(`[DEPLOYMENT CALLBACK] versionId=${versionId}, status=${status}`);
+    console.log(
+      `[DEPLOYMENT CALLBACK] versionId=${versionId}, status=${status}`
+    );
 
-    return res.status(200).json({ 
+    return res.status(200).json({
       message: '배포 결과가 성공적으로 업데이트되었습니다',
       versionId: versionIdNum,
-      status: deployStatus
+      status: deployStatus,
     });
-
   } catch (error) {
     console.error('[DEPLOYMENT CALLBACK ERROR]', error);
     return res.status(500).json({

@@ -17,7 +17,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. 대상 GitHub 레포지토리 클론
       - name: Clone target repository
         env:
           GH_TOKEN: ${{ secrets.INTELLISIA_GITHUB_TOKEN }}
@@ -25,24 +24,27 @@ jobs:
           git clone --branch ${{ github.event.inputs.ref }} \
             https://$GH_TOKEN@github.com/${{ github.event.inputs.repo }} target-repo
 
-      # 2. Docker Buildx 설정
+      - name: Get commit hash
+        id: commit
+        run: |
+          cd target-repo
+          echo "COMMIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 3. Docker 이미지 빌드 (로컬에서 태그 지정)
       - name: Build Docker image
         id: build-local
         run: |
           cd target-repo
-          LOCAL_IMAGE_TAG="local-my-app:${{ github.event.inputs.versionId }}"
-          if docker build -t "$LOCAL_IMAGE_TAG" .; then
+          IMAGE_TAG="local-my-app:${{ steps.commit.outputs.COMMIT_HASH }}"
+          if docker build -t "$IMAGE_TAG" .; then
             echo "status=success" >> $GITHUB_OUTPUT
-            echo "local_image_tag=$LOCAL_IMAGE_TAG" >> $GITHUB_OUTPUT
+            echo "local_image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
           else
             echo "status=fail" >> $GITHUB_OUTPUT
           fi
 
-      # 4. Trivy 취약점 스캔 (SARIF 파일로 저장)
       - name: Run Trivy vulnerability scan and generate SARIF
         if: success() && steps.build-local.outputs.status == 'success'
         id: trivy_scan
@@ -52,7 +54,6 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
 
-      # 5. Docker Hub 로그인 (빌드 성공 시에만)
       - name: Login to Docker Hub
         if: success() && steps.build-local.outputs.status == 'success'
         uses: docker/login-action@v2
@@ -60,35 +61,35 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      # 6. 빌드된 이미지를 Docker Hub에 푸시
       - name: Push Docker image to Docker Hub
         if: success() && steps.trivy_scan.outcome == 'success'
         id: push-to-hub
         run: |
-          LOCAL_IMAGE_TAG="${{ steps.build-local.outputs.local_image_tag }}"
-          DOCKERHUB_REPOSITORY_NAME="${{ secrets.DOCKERHUB_USERNAME }}/my-app"
-          DOCKERHUB_IMAGE_URI="$DOCKERHUB_REPOSITORY_NAME:${{ github.event.inputs.versionId }}"
-          docker tag "$LOCAL_IMAGE_TAG" "$DOCKERHUB_IMAGE_URI"
-          if docker push "$DOCKERHUB_IMAGE_URI"; then
-            docker tag "$DOCKERHUB_IMAGE_URI" "$DOCKERHUB_REPOSITORY_NAME:latest"
-            docker push "$DOCKERHUB_REPOSITORY_NAME:latest"
+          IMAGE_TAG_ONLY="${{ steps.commit.outputs.COMMIT_HASH }}"
+          FULL_TAG="seaproject/my-app:$IMAGE_TAG_ONLY"
+
+          docker tag "${{ steps.build-local.outputs.local_image_tag }}" "$FULL_TAG"
+
+          if docker push "$FULL_TAG"; then
+            docker tag "$FULL_TAG" "seaproject/my-app:latest"
+            docker push "seaproject/my-app:latest"
             echo "status=success" >> $GITHUB_OUTPUT
+            echo "image_tag=$IMAGE_TAG_ONLY" >> $GITHUB_OUTPUT
           else
             echo "status=fail" >> $GITHUB_OUTPUT
           fi
 
-      # 7. 빌드 결과 상태를 백엔드로 전송
       - name: Upload Build Result to Backend
         if: always()
         run: |
           CALLBACK_URL="${{ github.event.inputs.baseUrl }}/api/versions/${{ github.event.inputs.versionId }}/image-build/callback_build"
+          IMAGE_TAG="${{ steps.push-to-hub.outputs.image_tag }}"
           if [ "${{ steps.build-local.outputs.status }}" = "success" ]; then
-            curl -X POST "$CALLBACK_URL?versionId=${{ github.event.inputs.versionId }}&status=success"
+            curl -X POST "$CALLBACK_URL?versionId=${{ github.event.inputs.versionId }}&status=success&imageTag=$IMAGE_TAG"
           else
             curl -X POST "$CALLBACK_URL?versionId=${{ github.event.inputs.versionId }}&status=fail"
           fi
 
-      # 8. AWS 인증 정보 설정 (S3 업로드용)
       - name: Configure AWS Credentials
         if: always()
         uses: aws-actions/configure-aws-credentials@v2
@@ -97,18 +98,18 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # 9. Trivy 스캔 결과를 S3에 업로드하고, 백엔드에 결과 전송
       - name: Upload Trivy Results to S3 and Notify Backend
         if: always()
         run: |
+          VERSION_ID="${{ github.event.inputs.versionId }}"
           BUCKET="${{ secrets.S3_BUCKET_NAME }}"
           REGION="${{ secrets.AWS_REGION }}"
-          IMAGE_ANALYSIS_CALLBACK_URL="${{ github.event.inputs.baseUrl }}/api/versions/${{ github.event.inputs.versionId }}/image-analysis/callback_analysis"
+          IMAGE_ANALYSIS_CALLBACK_URL="${{ github.event.inputs.baseUrl }}/api/versions/${VERSION_ID}/image-analysis/callback_analysis"
 
-          SCAN_STATUS="fail"
           TRIVY_FILE="trivy-results.sarif"
-          TARGET_PATH="image-analysis/version-${{ github.event.inputs.versionId }}/$TRIVY_FILE"
+          TARGET_PATH="image-analysis/version-${VERSION_ID}/$TRIVY_FILE"
           PUBLIC_URL=""
+          SCAN_STATUS="fail"
 
           if [ -f "$TRIVY_FILE" ]; then
             aws s3 cp "$TRIVY_FILE" "s3://$BUCKET/$TARGET_PATH"
@@ -117,13 +118,8 @@ jobs:
             SCAN_STATUS="success"
           else
             echo "Trivy results file not found, assuming scan failure."
-            SCAN_STATUS="fail"
           fi
 
           curl -X POST "$IMAGE_ANALYSIS_CALLBACK_URL" \
             -H "Content-Type: application/json" \
-            -d '{
-              "versionId": '${{ github.event.inputs.versionId }}',
-              "status": "'$SCAN_STATUS'",
-              "fileUrl": "'$PUBLIC_URL'"
-            }'
+            -d "{\"versionId\": $VERSION_ID, \"status\": \"$SCAN_STATUS\", \"fileUrl\": \"$PUBLIC_URL\"}"

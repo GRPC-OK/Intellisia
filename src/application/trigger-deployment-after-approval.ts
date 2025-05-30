@@ -13,15 +13,30 @@ export async function triggerDeploymentAfterApproval(versionId: number) {
 
   await updateVersionStatusSafely(versionId, {
     deployStatus: 'pending',
+    flowStatus: 'pending',
   });
 
   try {
+    const IMAGE_REPO = process.env.DOCKER_REPO;
+    if (!IMAGE_REPO)
+      throw new Error('DOCKER_REPO 환경변수가 설정되지 않았습니다');
+
+    const mergedHelmValues = {
+      ...((version.helmValues?.content ?? {}) as Record<string, unknown>),
+      image: {
+        repository: IMAGE_REPO,
+        tag: version.imageTag,
+        pullPolicy: 'IfNotPresent',
+      },
+      host: `${version.project.name}.intellisia.site`,
+    };
+
     await triggerDeploymentWorkflow({
       versionId,
       projectName: version.project.name,
       imageTag: version.imageTag,
       domain: version.project.domain,
-      helmValues: version.helmValues?.content,
+      helmValues: mergedHelmValues,
     });
   } catch (err) {
     await updateVersionStatusSafely(versionId, {

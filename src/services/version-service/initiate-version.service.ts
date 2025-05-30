@@ -12,7 +12,7 @@ interface HelmResources {
 
 interface HelmValueOverrides {
   replicaCount?: number;
-  containerPort?: number;
+  port?: number;
   resources?: HelmResources;
   [key: string]: unknown;
 }
@@ -72,12 +72,8 @@ export async function initiateVersionInsideTx(
       ['replicaCount'],
       undefined
     ) ?? 1;
-  const defaultProjectContainerPort =
-    getJsonValue<number | undefined>(
-      defaultHelm,
-      ['containerPort'],
-      undefined
-    ) ?? 8080;
+  const defaultProjectPort =
+    getJsonValue<number | undefined>(defaultHelm, ['port'], undefined) ?? 8080;
   const defaultProjectCpuRequest =
     getJsonValue<string | undefined>(
       defaultHelm,
@@ -98,8 +94,7 @@ export async function initiateVersionInsideTx(
   const finalHelmValues: Prisma.JsonObject = {
     replicaCount:
       helmValueOverrides?.replicaCount ?? defaultProjectReplicaCount,
-    containerPort:
-      helmValueOverrides?.containerPort ?? defaultProjectContainerPort,
+    port: helmValueOverrides?.port ?? defaultProjectPort,
     resources: {
       requests: {
         cpu: finalCpuRequest,
@@ -114,7 +109,7 @@ export async function initiateVersionInsideTx(
 
   if (helmValueOverrides) {
     for (const key in helmValueOverrides) {
-      if (!['replicaCount', 'containerPort', 'resources'].includes(key)) {
+      if (!['replicaCount', 'port', 'resources'].includes(key)) {
         finalHelmValues[key] = helmValueOverrides[key] as Prisma.JsonValue;
       }
     }
