@@ -65,13 +65,16 @@ jobs:
         if: success() && steps.trivy_scan.outcome == 'success'
         id: push-to-hub
         run: |
-          IMAGE_TAG="seaproject/my-app:${{ steps.commit.outputs.COMMIT_HASH }}"
-          docker tag "${{ steps.build-local.outputs.local_image_tag }}" "$IMAGE_TAG"
-          if docker push "$IMAGE_TAG"; then
-            docker tag "$IMAGE_TAG" "seaproject/my-app:latest"
+          IMAGE_TAG_ONLY="${{ steps.commit.outputs.COMMIT_HASH }}"
+          FULL_TAG="seaproject/my-app:$IMAGE_TAG_ONLY"
+
+          docker tag "${{ steps.build-local.outputs.local_image_tag }}" "$FULL_TAG"
+
+          if docker push "$FULL_TAG"; then
+            docker tag "$FULL_TAG" "seaproject/my-app:latest"
             docker push "seaproject/my-app:latest"
             echo "status=success" >> $GITHUB_OUTPUT
-            echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+            echo "image_tag=$IMAGE_TAG_ONLY" >> $GITHUB_OUTPUT
           else
             echo "status=fail" >> $GITHUB_OUTPUT
           fi
