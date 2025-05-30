@@ -17,10 +17,14 @@ export async function triggerDeploymentAfterApproval(versionId: number) {
   });
 
   try {
+    const IMAGE_REPO = process.env.DOCKER_REPO;
+    if (!IMAGE_REPO)
+      throw new Error('DOCKER_REPO 환경변수가 설정되지 않았습니다');
+
     const mergedHelmValues = {
       ...((version.helmValues?.content ?? {}) as Record<string, unknown>),
       image: {
-        repository: `seaproject/${version.project.name}`,
+        repository: IMAGE_REPO,
         tag: version.imageTag,
         pullPolicy: 'IfNotPresent',
       },
