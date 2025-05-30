@@ -24,7 +24,9 @@ export async function triggerDeploymentAfterApproval(versionId: number) {
         tag: version.imageTag,
         pullPolicy: 'IfNotPresent',
       },
+      host: `${version.project.name}.intellisia.site`,
     };
+
     await triggerDeploymentWorkflow({
       versionId,
       projectName: version.project.name,
