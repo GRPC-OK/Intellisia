@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { updateVersionStatusSafely } from '@/services/version-service/version-status-updater.service';
-import { triggerDeploymentWorkflow } from '@/services/deployment-service/trigger-deployment-workflow';
-import prisma from '@/lib/prisma';
+import { triggerDeploymentAfterApproval } from '@/application/trigger-deployment-after-approval';
 
 export default async function handler(
   req: NextApiRequest,
@@ -23,7 +22,7 @@ export default async function handler(
 
   try {
     if (!approved) {
-      // 거부된 경우: 기존 로직 유지
+      // 거부된 경우 처리
       await updateVersionStatusSafely(versionId, {
         approveStatus: 'rejected',
         flowStatus: 'fail',
@@ -36,55 +35,32 @@ export default async function handler(
       });
     }
 
-    // 🆕 승인된 경우: 배포까지 자동 실행
-
-    // 1. 버전 정보 조회 (배포에 필요한 데이터)
-    const version = await prisma.version.findUnique({
-      where: { id: versionId },
-      include: {
-        project: true,
-        helmValues: true,
-      },
-    });
-
-    if (!version) {
-      return res.status(404).json({ message: 'Version not found' });
-    }
-
-    // 2. 승인 상태 업데이트
+    // 승인 상태만 반영
     await updateVersionStatusSafely(versionId, {
       approveStatus: 'approved',
-      deployStatus: 'pending', // 🆕 배포 상태도 함께 업데이트
-      flowStatus: 'pending',
     });
 
-    // 3. 🆕 자동으로 배포 워크플로우 트리거
-    await triggerDeploymentWorkflow({
-      versionId,
-      projectName: version.project.name,
-      imageTag: version.imageTag,
-      domain: version.project.domain,
-      helmValues: version.helmValues?.content,
-    });
+    // 배포는 triggerDeploymentAfterApproval 함수에 위임
+    try {
+      await triggerDeploymentAfterApproval(versionId);
 
-    return res.status(200).json({
-      message: '버전이 승인되었고 배포가 시작되었습니다',
-      versionId,
-      status: 'approved_and_deploying', // 🆕 새로운 상태
-    });
-  } catch (error) {
-    console.error('[APPROVAL AND DEPLOY ERROR]', error);
-
-    // 에러 발생 시 상태 롤백
-    await updateVersionStatusSafely(versionId, {
-      approveStatus: 'pending', // 승인 상태 되돌리기
-      deployStatus: 'fail',
-      flowStatus: 'fail',
-    });
-
+      return res.status(200).json({
+        message: '버전이 승인되었고 배포가 시작되었습니다',
+        versionId,
+        status: 'approved_and_deploying',
+      });
+    } catch (deployErr) {
+      console.error('[DEPLOY ERROR]', deployErr);
+      return res.status(500).json({
+        message: '배포 실패 (승인 상태는 유지됨)',
+        error: String(deployErr),
+      });
+    }
+  } catch (err) {
+    console.error('[APPROVAL ERROR]', err);
     return res.status(500).json({
-      message: '승인 및 배포 처리 실패',
-      error: String(error),
+      message: '승인 처리 실패',
+      error: String(err),
     });
   }
 }
