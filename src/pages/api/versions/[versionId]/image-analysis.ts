@@ -15,11 +15,9 @@ export default async function handler(
     console.error(
       `[API /image-analysis] ERROR: Invalid versionId: ${req.query.versionId}. Returning 400.`
     );
-    return res
-      .status(400)
-      .json({
-        message: 'Invalid versionId provided in URL. It must be a number.',
-      });
+    return res.status(400).json({
+      message: 'Invalid versionId provided in URL. It must be a number.',
+    });
   }
 
   try {
@@ -117,12 +115,9 @@ export default async function handler(
       console.warn(
         `[API /image-analysis] No imageAnalysisS3Url found for version ID ${versionId}. Returning 404.`
       );
-      return res
-        .status(404)
-        .json({
-          message:
-            'No analysis result found for this version (missing S3 URL).',
-        });
+      return res.status(404).json({
+        message: 'No analysis result found for this version (missing S3 URL).',
+      });
     }
 
     let sarifData; // 3. DB에 S3 URL이 있다면, 이제 S3에서 SARIF 파일 가져오기

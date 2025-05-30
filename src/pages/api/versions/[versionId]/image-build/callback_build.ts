@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { StepStatus, FlowStatus } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import { updateVersionStatusSafely } from '@/services/version-service/version-status-updater.service';
 
 export default async function handler(
@@ -10,6 +11,7 @@ export default async function handler(
 
   const versionId = Number(req.query.versionId);
   const status = req.query.status as string;
+  const imageTag = req.query.imageTag as string | undefined;
 
   if (isNaN(versionId) || !['success', 'fail'].includes(status)) {
     return res.status(400).json({ error: 'Invalid or missing parameters' });
@@ -19,15 +21,16 @@ export default async function handler(
     const isSuccess = status === 'success';
     const stepStatus = isSuccess ? StepStatus.success : StepStatus.fail;
 
-    // buildStatus만 업데이트, 실패 시 flowStatus도 종료 처리리
     await updateVersionStatusSafely(versionId, {
       buildStatus: stepStatus,
-      flowStatus: isSuccess ? undefined : FlowStatus.fail, // 실패 시 flow도 종료
+      flowStatus: isSuccess ? undefined : FlowStatus.fail,
     });
 
-    // 병렬성 대비 보정 호출
-    if (isSuccess) {
-      await updateVersionStatusSafely(versionId, {});
+    if (isSuccess && imageTag) {
+      await prisma.version.update({
+        where: { id: versionId },
+        data: { imageTag },
+      });
     }
 
     return res
