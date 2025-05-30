@@ -5,6 +5,9 @@ import { useRouter } from 'next/router';
 import FlowStage, { FlowStatusType } from '@/components/version/FlowStage';
 import FlowConnector from '@/components/version/FlowConnector';
 import ApprovalModal from '@/components/version/ApprovalModal';
+import ReviewDeployButton from '@/components/version/ReviewDeployButton';
+import RetryDeploymentButton from '@/components/version/RetryDeploymentButton';
+import RetryDeploymentModal from '@/components/version/RetryDeploymentModal';
 import VersionHeader from '@/components/version/VersionHeader';
 import { VersionFlowStatus } from '@/types/version-flow';
 import {
@@ -23,6 +26,7 @@ export default function VersionFlowPage() {
 
   const [data, setData] = useState<VersionFlowStatus | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [retryModal, setRetryModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
@@ -68,6 +72,7 @@ export default function VersionFlowPage() {
     )
       return;
     if (!isStageClickable(key, data)) return;
+
     const route = getStageRoute(key, projectName, versionId);
     if (route) router.push(route);
   };
@@ -84,15 +89,27 @@ export default function VersionFlowPage() {
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
 
       setShowModal(false);
-
-      const statusRes = await fetch(`/api/versions/${versionId}/flow-status`);
-      if (statusRes.ok) {
-        const json = await statusRes.json();
-        setData(json);
-      }
+      fetchStatus();
     } catch (err) {
       console.error('Failed to approve:', err);
       setError(err instanceof Error ? err.message : 'Approval failed');
+    }
+  };
+
+  const handleRetryDeployment = async () => {
+    if (typeof versionId !== 'string') return;
+
+    try {
+      const res = await fetch(`/api/versions/${versionId}/retry-deployment`, {
+        method: 'PATCH',
+      });
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
+      setRetryModal(false);
+      fetchStatus();
+    } catch (err) {
+      console.error('Failed to retry deployment:', err);
+      setError(err instanceof Error ? err.message : 'Retry failed');
     }
   };
 
@@ -122,6 +139,8 @@ export default function VersionFlowPage() {
 
   const connections = generateFlowConnections();
   const reviewButtonEnabled = canShowReviewButton(data);
+  const canRetry =
+    data.approveStatus === 'approved' && data.deployStatus === 'fail';
 
   return (
     <div className="min-h-screen bg-[#0d1117] px-4 py-10 text-white">
@@ -153,10 +172,10 @@ export default function VersionFlowPage() {
                     style={{
                       left: `${coord.x}%`,
                       top: `${coord.y}%`,
-                      transform: `translate(-50%, -50%)`,
+                      transform: 'translate(-50%, -50%)',
                     }}
                   >
-                    <div className="relative flex flex-col items-center gap-y-1 leading-tight">
+                    <div className="relative flex flex-col items-center gap-y-2 leading-tight">
                       <FlowStage
                         label={key}
                         status={rawStatus}
@@ -164,19 +183,17 @@ export default function VersionFlowPage() {
                         onClick={() => handleStageClick(key)}
                       />
                       {isApproval && (
-                        <div className="absolute top-full mt-6 left-1/2 -translate-x-1/2">
-                          <button
+                        <>
+                          <ReviewDeployButton
+                            enabled={reviewButtonEnabled}
                             onClick={() => setShowModal(true)}
-                            disabled={!reviewButtonEnabled}
-                            className={`text-sm px-4 py-2 font-semibold rounded-md z-20 transition-all duration-200 ${
-                              reviewButtonEnabled
-                                ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                                : 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                            }`}
-                          >
-                            Review Deployment
-                          </button>
-                        </div>
+                          />
+                          {canRetry && (
+                            <RetryDeploymentButton
+                              onClick={() => setRetryModal(true)}
+                            />
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -193,6 +210,12 @@ export default function VersionFlowPage() {
         onApprove={() => handleApproval(true)}
         onReject={() => handleApproval(false)}
         data={data}
+      />
+
+      <RetryDeploymentModal
+        isOpen={retryModal}
+        onClose={() => setRetryModal(false)}
+        onConfirm={handleRetryDeployment}
       />
     </div>
   );

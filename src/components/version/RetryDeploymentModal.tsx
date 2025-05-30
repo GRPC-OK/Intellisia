@@ -5,13 +5,13 @@ import React from 'react';
 interface RetryDeploymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onRetry: () => void;
+  onConfirm: () => void;
 }
 
 const RetryDeploymentModal: React.FC<RetryDeploymentModalProps> = ({
   isOpen,
   onClose,
-  onRetry,
+  onConfirm,
 }) => {
   if (!isOpen) return null;
 
@@ -45,7 +45,7 @@ const RetryDeploymentModal: React.FC<RetryDeploymentModalProps> = ({
             취소
           </button>
           <button
-            onClick={onRetry}
+            onClick={onConfirm}
             className="min-w-[80px] bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm"
           >
             재배포
