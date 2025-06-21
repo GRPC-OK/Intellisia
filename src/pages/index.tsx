@@ -1,6 +1,5 @@
-// src/pages/index.tsx - 로그인 기능 복원
 import { signIn, useSession } from 'next-auth/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
 import styles from '../styles/index.module.css';
@@ -12,15 +11,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
 
-  // 이미 로그인된 경우 대시보드로 리디렉션
-  useEffect(() => {
-    if (status === 'authenticated' && session) {
-      // 사용자 동기화 후 대시보드로 이동
-      handleUserSync();
-    }
-  }, [session, status]);
-
-  const handleUserSync = async () => {
+  // useCallback으로 감싸서 의존성 배열 문제 해결
+  const handleUserSync = useCallback(async () => {
     setSyncStatus('syncing');
 
     try {
@@ -30,7 +22,6 @@ export default function Home() {
         setSyncStatus('success');
         console.log('[User Sync Success]', result.user);
 
-        // 짧은 지연 후 대시보드로 이동
         setTimeout(() => {
           router.push('/dashboard');
         }, 1000);
@@ -38,7 +29,6 @@ export default function Home() {
         setSyncStatus('error');
         console.error('[User Sync Error]', result.error);
 
-        // 에러가 있어도 대시보드로 이동 (수동 동기화 가능)
         setTimeout(() => {
           router.push('/dashboard');
         }, 2000);
@@ -47,12 +37,18 @@ export default function Home() {
       console.error('[User Sync Exception]', error);
       setSyncStatus('error');
 
-      // 에러가 있어도 대시보드로 이동
       setTimeout(() => {
         router.push('/dashboard');
       }, 2000);
     }
-  };
+  }, [router]);
+
+  // 이미 로그인된 경우 대시보드로 리디렉션
+  useEffect(() => {
+    if (status === 'authenticated' && session) {
+      handleUserSync();
+    }
+  }, [session, status, handleUserSync]);
 
   const handleLogin = async () => {
     setLoading(true);
@@ -145,7 +141,7 @@ export default function Home() {
     <div className={styles.page}>
       <main className={styles.main}>
         <Image
-          src="/next.svg" // GitHub 로고가 없으므로 Next.js 로고 사용
+          src="/next.svg"
           alt="Intellisia 로고"
           width={100}
           height={100}

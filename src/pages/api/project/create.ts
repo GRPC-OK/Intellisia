@@ -1,4 +1,3 @@
-// src/pages/api/project/create.ts - JWT 인증 적용 버전
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Prisma } from '@prisma/client';
 import { z } from 'zod';
@@ -30,7 +29,7 @@ const projectCreateSchema = z.object({
  */
 async function createProjectHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // 1. 인증된 사용자 ID 가져오기 (더 이상 하드코딩 없음!)
+    // 1. 인증된 사용자 ID 가져오기
     const ownerId = getUserIdFromRequest(req);
     if (!ownerId) {
       return res.status(401).json({
@@ -64,7 +63,7 @@ async function createProjectHandler(req: NextApiRequest, res: NextApiResponse) {
     // 4. GitHub URL 소유권 검증 (선택적)
     if (req.user?.githubId) {
       try {
-        await validateGitHubRepoAccess(validatedData.githubUrl, req.user.githubId);
+        await validateGitHubRepoAccess(validatedData.githubUrl);
       } catch (error) {
         console.warn('[GitHub Repo Validation]', error);
         // 경고만 로그하고 계속 진행 (선택적 검증)
@@ -93,7 +92,7 @@ async function createProjectHandler(req: NextApiRequest, res: NextApiResponse) {
       } as Prisma.JsonObject,
       owner: {
         connect: {
-          id: ownerId, // 인증된 사용자 ID 사용
+          id: ownerId,
         },
       },
     };
@@ -149,7 +148,7 @@ async function createProjectHandler(req: NextApiRequest, res: NextApiResponse) {
 /**
  * GitHub 저장소 접근 권한 검증 (선택적)
  */
-async function validateGitHubRepoAccess(githubUrl: string, userGithubId: string): Promise<void> {
+async function validateGitHubRepoAccess(githubUrl: string): Promise<void> {
   try {
     const urlParts = new URL(githubUrl);
     const [, owner, repo] = urlParts.pathname.split('/');
@@ -167,11 +166,9 @@ async function validateGitHubRepoAccess(githubUrl: string, userGithubId: string)
       throw new Error(`GitHub repo not accessible: ${response.status}`);
     }
 
-    const repoInfo = await response.json();
+    // response.json()을 호출하되 결과를 사용하지 않음
+    await response.json();
     console.log(`[GitHub Validation] Repo ${owner}/${repoName} is accessible`);
-
-    // 추가 검증: 사용자가 해당 저장소에 접근 권한이 있는지 확인
-    // (이 부분은 GitHub Token이 필요하므로 선택적으로 구현)
 
   } catch (error) {
     console.warn('[GitHub Repo Validation Failed]', error);

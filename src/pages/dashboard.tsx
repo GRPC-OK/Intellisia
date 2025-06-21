@@ -1,7 +1,7 @@
-// src/pages/dashboard.tsx - 인증 적용 버전
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useSession, signOut } from 'next-auth/react';
+import Image from 'next/image';
 
 // 인증된 사용자의 프로젝트 데이터 타입
 interface AuthenticatedProjectData {
@@ -163,12 +163,12 @@ export default function Dashboard() {
           {session?.user && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               {session.user.image && (
-                <img
+                <Image
                   src={session.user.image}
                   alt="프로필"
+                  width={32}
+                  height={32}
                   style={{
-                    width: '32px',
-                    height: '32px',
                     borderRadius: '50%',
                     border: '2px solid #30363d'
                   }}

@@ -1,26 +1,43 @@
-// src/pages/api/auth/sync-user.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getToken } from 'next-auth/jwt';
 import prisma from '@/lib/prisma';
+import {
+    UserSyncResponse,
+    GitHubUserResponse,
+    GitHubEmailResponse
+} from '@/types/auth';
 
-/**
- * GitHub OAuth 로그인 후 사용자 정보를 DB에 동기화하는 API
- * NextAuth 콜백에서 호출되거나 클라이언트에서 직접 호출 가능
- */
+interface ExtendedJWT {
+    accessToken?: string;
+    githubId?: string;
+    sub?: string;
+    iat?: number;
+    exp?: number;
+    jti?: string;
+}
+
+interface ErrorResponse {
+    error: string;
+    message: string;
+    debug?: string;
+}
+
 export default async function handler(
     req: NextApiRequest,
-    res: NextApiResponse
+    res: NextApiResponse<UserSyncResponse | ErrorResponse>
 ) {
     if (req.method !== 'POST') {
-        return res.status(405).json({ message: 'Method Not Allowed' });
+        return res.status(405).json({
+            error: 'Method Not Allowed',
+            message: 'Method Not Allowed'
+        });
     }
 
     try {
-        // JWT 토큰에서 사용자 정보 추출
         const token = await getToken({
             req,
             secret: process.env.NEXTAUTH_SECRET
-        });
+        }) as ExtendedJWT | null;
 
         if (!token) {
             return res.status(401).json({
@@ -30,7 +47,7 @@ export default async function handler(
         }
 
         // GitHub API를 통해 최신 사용자 정보 가져오기
-        let githubUser;
+        let githubUser: GitHubUserResponse;
         try {
             const githubResponse = await fetch('https://api.github.com/user', {
                 headers: {
@@ -43,7 +60,7 @@ export default async function handler(
                 throw new Error(`GitHub API error: ${githubResponse.status}`);
             }
 
-            githubUser = await githubResponse.json();
+            githubUser = await githubResponse.json() as GitHubUserResponse;
         } catch (error) {
             console.error('[GitHub API Error]', error);
             return res.status(400).json({
@@ -53,7 +70,8 @@ export default async function handler(
         }
 
         // 이메일이 없는 경우 GitHub API에서 이메일 가져오기
-        let userEmail = githubUser.email;
+        let userEmail: string = githubUser.email || '';
+
         if (!userEmail) {
             try {
                 const emailResponse = await fetch('https://api.github.com/user/emails', {
@@ -64,14 +82,21 @@ export default async function handler(
                 });
 
                 if (emailResponse.ok) {
-                    const emails = await emailResponse.json();
-                    const primaryEmail = emails.find((email: any) => email.primary);
-                    userEmail = primaryEmail?.email || githubUser.login + '@github.local';
+                    const emails = await emailResponse.json() as GitHubEmailResponse[];
+                    const primaryEmail = emails.find((email) => email.primary);
+                    userEmail = primaryEmail?.email || `${githubUser.login}@github.local`;
+                } else {
+                    userEmail = `${githubUser.login}@github.local`;
                 }
             } catch (error) {
                 console.warn('[GitHub Email API Error]', error);
-                userEmail = githubUser.login + '@github.local';
+                userEmail = `${githubUser.login}@github.local`;
             }
+        }
+
+        // userEmail이 여전히 빈 문자열인 경우 대체값 설정
+        if (!userEmail) {
+            userEmail = `${githubUser.login}@github.local`;
         }
 
         // 데이터베이스에 사용자 정보 동기화 (Upsert)
@@ -82,7 +107,6 @@ export default async function handler(
             update: {
                 name: githubUser.name || githubUser.login,
                 avatarUrl: githubUser.avatar_url || '/default-avatar.png',
-                // GitHub 정보 업데이트 (updatedAt 자동 설정)
             },
             create: {
                 name: githubUser.name || githubUser.login,
@@ -105,7 +129,7 @@ export default async function handler(
                 name: user.name,
                 email: user.email,
                 avatarUrl: user.avatarUrl,
-                isNewUser: false, // 실제로는 create/update 여부로 판단
+                isNewUser: false,
             }
         });
 
@@ -115,47 +139,5 @@ export default async function handler(
             error: 'Internal Server Error',
             message: '사용자 동기화 중 오류가 발생했습니다.'
         });
-    }
-}
-
-// src/services/auth/user-sync.service.ts
-/**
- * 사용자 동기화 관련 비즈니스 로직
- */
-export class UserSyncService {
-    /**
-     * 클라이언트에서 사용할 사용자 동기화 함수
-     */
-    static async syncCurrentUser(): Promise<{
-        success: boolean;
-        user?: any;
-        error?: string;
-    }> {
-        try {
-            const response = await fetch('/api/auth/sync-user', {
-                method: 'POST',
-                credentials: 'include', // 쿠키 포함
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                return {
-                    success: false,
-                    error: data.message || 'Failed to sync user'
-                };
-            }
-
-            return {
-                success: true,
-                user: data.user
-            };
-        } catch (error) {
-            console.error('[Client User Sync Error]', error);
-            return {
-                success: false,
-                error: 'Network error occurred'
-            };
-        }
     }
 }

@@ -1,34 +1,25 @@
-// src/pages/api/auth/[...nextauth].ts - 완전 타입 안전 버전
-import NextAuth, { Session, User } from 'next-auth';
-import { JWT } from 'next-auth/jwt';
+import NextAuth from 'next-auth';
 import GitHubProvider from 'next-auth/providers/github';
 import prisma from '@/lib/prisma';
 
-// 확장된 타입들을 임포트
-interface ExtendedSession extends Session {
-  accessToken?: string;
-  user: {
-    id?: string;
-    githubId?: string;
-    name?: string | null;
-    email?: string | null;
-    image?: string | null;
-  };
-}
-
-interface ExtendedJWT extends JWT {
-  accessToken?: string;
-  githubId?: string;
-}
-
-// GitHub Profile 타입
-interface GitHubProfile {
+// GitHub Profile 타입 정의
+interface GitHubProfileType {
   id: string;
   login: string;
   name?: string | null;
   email?: string | null;
   avatar_url?: string;
-  [key: string]: any;
+  html_url?: string;
+  [key: string]: unknown;
+}
+
+// Session 타입 정의
+interface SessionType {
+  user?: {
+    email?: string | null;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
 }
 
 export default NextAuth({
@@ -46,76 +37,41 @@ export default NextAuth({
 
   session: {
     strategy: 'jwt',
-    maxAge: 60 * 60 * 24 * 7, // 일주일
+    maxAge: 60 * 60 * 24 * 7,
   },
 
   callbacks: {
-    async jwt({ token, account, user }): Promise<ExtendedJWT> {
-      const extendedToken = token as ExtendedJWT;
-
-      // 처음 로그인 시 GitHub에서 받은 정보를 토큰에 저장
+    async jwt({ token, account }) {
       if (account) {
-        extendedToken.accessToken = account.access_token;
-        extendedToken.githubId = user?.id;
+        token.accessToken = account.access_token;
+        token.githubId = token.sub;
       }
-      return extendedToken;
+      return token;
     },
 
-    async session({ session, token }): Promise<ExtendedSession> {
-      const extendedToken = token as ExtendedJWT;
-
-      // 세션에 추가 정보 포함
-      const extendedSession: ExtendedSession = {
+    async session({ session, token }) {
+      return {
         ...session,
-        accessToken: extendedToken.accessToken,
+        accessToken: token.accessToken,
         user: {
           ...session.user,
-          id: extendedToken.sub,
-          githubId: extendedToken.githubId,
+          id: token.sub,
+          githubId: token.githubId,
         }
       };
-
-      return extendedSession;
     },
 
-    /**
-     * 로그인 성공 시 자동으로 사용자 정보를 DB에 동기화
-     */
-    async signIn({ user, account, profile }): Promise<boolean> {
-      if (account?.provider === 'github' && profile) {
+    async signIn({ profile }) {
+      if (profile) {
         try {
-          // GitHub 프로필을 GitHubProfile 타입으로 캐스팅
-          const githubProfile = profile as GitHubProfile;
+          const githubProfile = profile as GitHubProfileType;
 
-          // GitHub 프로필에서 이메일 추출
-          let userEmail = githubProfile.email;
+          let userEmail: string = githubProfile.email || '';
 
-          // 이메일이 없는 경우 GitHub API에서 가져오기
-          if (!userEmail && account.access_token) {
-            try {
-              const emailResponse = await fetch('https://api.github.com/user/emails', {
-                headers: {
-                  'Authorization': `token ${account.access_token}`,
-                  'User-Agent': 'Intellisia-App'
-                }
-              });
-
-              if (emailResponse.ok) {
-                const emails = await emailResponse.json();
-                const primaryEmail = emails.find((email: any) => email.primary);
-                userEmail = primaryEmail?.email;
-              }
-            } catch (error) {
-              console.warn('[GitHub Email Fetch Error]', error);
-            }
-          }
-
-          // 기본 이메일 설정
           if (!userEmail) {
             userEmail = `${githubProfile.login}@github.local`;
           }
 
-          // 데이터베이스에 사용자 정보 동기화
           await prisma.user.upsert({
             where: { email: userEmail },
             update: {
@@ -133,44 +89,27 @@ export default NextAuth({
           return true;
         } catch (error) {
           console.error('[SignIn Callback Error]', error);
-          // 에러가 발생해도 로그인은 허용 (나중에 수동 동기화 가능)
           return true;
         }
       }
       return true;
     },
 
-    /**
-     * 사용자가 접근 권한이 있는지 확인
-     */
-    async redirect({ url, baseUrl }): Promise<string> {
-      // 로그인 후 대시보드로 리디렉션
+    async redirect({ url, baseUrl }) {
       if (url.startsWith('/')) return `${baseUrl}${url}`;
       if (new URL(url).origin === baseUrl) return url;
       return `${baseUrl}/dashboard`;
     },
   },
 
-  pages: {
-    signIn: '/', // 커스텀 로그인 페이지
-    signOut: '/', // 로그아웃 후 메인 페이지로
-    error: '/auth/error', // 에러 페이지
-  },
-
   events: {
-    /**
-     * 로그인 성공 이벤트 로깅
-     */
-    async signIn({ user, account, profile, isNewUser }) {
+    async signIn({ user, isNewUser }) {
       console.log(`[Auth Event] Sign in: ${user.email}, isNewUser: ${isNewUser}`);
     },
 
-    /**
-     * 로그아웃 이벤트 로깅
-     */
-    async signOut({ session, token }) {
-      const sessionAny = session as any;
-      console.log(`[Auth Event] Sign out: ${sessionAny?.user?.email || 'Unknown'}`);
+    async signOut({ session }) {
+      const sessionTyped = session as unknown as SessionType;
+      console.log(`[Auth Event] Sign out: ${sessionTyped?.user?.email || 'Unknown'}`);
     },
   },
 
