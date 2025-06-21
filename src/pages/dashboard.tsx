@@ -1,108 +1,203 @@
-// src/pages/dashboard.tsx
-import React, { useEffect, useState } from 'react'; // useState, useEffect 임포트
+// src/pages/dashboard.tsx - 인증 적용 버전
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import { useSession, signOut } from 'next-auth/react';
 
-// DB에서 가져올 프로젝트 데이터의 타입을 정의합니다. (백엔드 API 응답 타입과 일치)
-interface ProjectData {
-  id: number; // DB ID (고유 키로 사용)
+// 인증된 사용자의 프로젝트 데이터 타입
+interface AuthenticatedProjectData {
+  id: number;
   name: string;
+  owner?: {
+    name: string;
+    id: number;
+  };
+  isOwner: boolean; // 현재 사용자가 소유자인지
 }
 
 export default function Dashboard() {
   const router = useRouter();
+  const { data: session, status } = useSession();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-
-  // 프로젝트 등록(생성) 버튼 클릭 시 템플릿 페이지로 이동하는 함수
-  const handleNewProject = () => {
-    router.push('/create-project'); // '/create-project' 페이지로 이동
-  };
-
-  // 프로젝트 목록 상태 관리 (초기값 빈 배열)
-  const [project, setProjects] = useState<ProjectData[]>([]);
-  // 데이터 로딩 상태 관리
+  const [projects, setProjects] = useState<AuthenticatedProjectData[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  // 오류 상태 관리
   const [error, setError] = useState<string | null>(null);
 
-  // 검색 필터링된 프로젝트 목록
-  const filteredProjects = project.filter(proj =>
+  // 인증되지 않은 사용자 리디렉션
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.replace('/');
+      return;
+    }
+  }, [status, router]);
+
+  // 프로젝트 데이터 가져오기 (인증된 사용자만)
+  useEffect(() => {
+    if (status === 'authenticated' && session) {
+      fetchAuthenticatedProjects();
+    }
+  }, [status, session]);
+
+  const fetchAuthenticatedProjects = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/project/dashboard_projects', {
+        method: 'GET',
+        credentials: 'include', // 쿠키 포함
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.status === 401) {
+        // 인증 만료 - 로그인 페이지로 리디렉션
+        await signOut({ callbackUrl: '/' });
+        return;
+      }
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`HTTP error! status: ${response.status}, body: ${errorBody}`);
+        throw new Error(`프로젝트 목록을 가져오는 데 실패했습니다. (${response.status})`);
+      }
+
+      const data: AuthenticatedProjectData[] = await response.json();
+      setProjects(data);
+    } catch (err: unknown) {
+      console.error('프로젝트 목록 가져오기 실패:', err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : '프로젝트 목록을 가져오는 중 오류 발생'
+      );
+      setProjects([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleNewProject = () => {
+    router.push('/create-project');
+  };
+
+  const handleProjectDetail = (name: string) => {
+    router.push(`/project/${name}`);
+  };
+
+  const handleSignOut = async () => {
+    await signOut({ callbackUrl: '/' });
+  };
+
+  const filteredProjects = projects.filter(proj =>
     proj.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // 컴포넌트가 마운트될 때 (페이지 로딩 시) API 호출하여 데이터 가져오기
-  useEffect(() => {
-    const fetchProjects = async () => {
-      setIsLoading(true); // 로딩 시작
-      setError(null); // 오류 초기화
-
-      try {
-        // TODO: 백엔드 API 라우트 URL로 변경
-        const response = await fetch('/api/project/dashboard_projects', {
-          // 백엔드 API 호출
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            // 필요한 경우 인증 헤더 추가
-          },
-        });
-
-        if (!response.ok) {
-          const errorBody = await response.text();
-          console.error(
-            `HTTP error! status: ${response.status}, body: ${errorBody}`
-          );
-          throw new Error(
-            `프로젝트 목록을 가져오는 데 실패했습니다. 상태 코드: ${response.status}`
-          );
-        }
-
-        // API 응답 데이터 파싱 (ProjectData[] 타입)
-        const data: ProjectData[] = await response.json();
-        setProjects(data); // 프로젝트 목록 상태 업데이트
-      } catch (err: unknown) {
-        console.error('프로젝트 목록 가져오기 실패:', err);
-        setError(
-          err instanceof Error
-            ? err.message
-            : '프로젝트 목록을 가져오는 중 오류 발생'
-        );
-        setProjects([]); // 오류 발생 시 목록 비우기
-      } finally {
-        setIsLoading(false); // 로딩 종료
-      }
-    };
-
-    fetchProjects(); // API 호출 함수 실행
-  }, []); // 의존성 배열이 비어 있으므로 컴포넌트가 처음 마운트될 때만 실행
-
-  const handleProjectDetail = (name: string) => {
-    router.push(`/project/${name}`); // '/project/[name]' 페이지로 이동
-  };
-
-  // 로딩 중 상태 표시
-  if (isLoading) {
+  // 로딩 중 상태
+  if (status === 'loading' || isLoading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#181c23', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div>프로젝트 목록을 로딩 중입니다...</div>
+      <div style={{
+        minHeight: '100vh',
+        background: '#181c23',
+        color: '#fff',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
+          <div>대시보드를 로딩 중입니다...</div>
+        </div>
       </div>
     );
   }
 
-  // 오류 상태 표시
+  // 인증되지 않은 상태
+  if (status === 'unauthenticated') {
+    return null; // useEffect에서 리디렉션 처리
+  }
+
+  // 오류 상태
   if (error) {
     return (
-      <div style={{ minHeight: '100vh', background: '#181c23', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div>오류: {error}</div>
+      <div style={{
+        minHeight: '100vh',
+        background: '#181c23',
+        color: '#fff',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div className="text-center">
+          <div className="text-red-400 text-xl mb-4">⚠️ 오류 발생</div>
+          <div className="mb-4">{error}</div>
+          <button
+            onClick={fetchAuthenticatedProjects}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+          >
+            다시 시도
+          </button>
+        </div>
       </div>
     );
   }
 
-  // 프로젝트 목록 데이터를 사용하여 UI 렌더링
   return (
     <div style={{ minHeight: '100vh', background: '#181c23', color: '#fff', display: 'flex', flexDirection: 'column' }}>
+      {/* 헤더에 사용자 정보 추가 */}
+      <header style={{
+        background: '#0d1117',
+        borderBottom: '1px solid #2e333d',
+        padding: '1rem 2rem',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 'bold' }}>
+          Intellisia 🥕
+        </h1>
 
-      {/* Main Content */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {session?.user && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {session.user.image && (
+                <img
+                  src={session.user.image}
+                  alt="프로필"
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    border: '2px solid #30363d'
+                  }}
+                />
+              )}
+              <span style={{ fontSize: '0.9rem', color: '#b0b8c1' }}>
+                {session.user.name || session.user.email}
+              </span>
+            </div>
+          )}
+
+          <button
+            onClick={handleSignOut}
+            style={{
+              background: '#21262d',
+              color: '#c9d1d9',
+              border: '1px solid #30363d',
+              borderRadius: '6px',
+              padding: '6px 12px',
+              fontSize: '0.875rem',
+              cursor: 'pointer'
+            }}
+          >
+            로그아웃
+          </button>
+        </div>
+      </header>
+
+      {/* 메인 콘텐츠 */}
       <main style={{
         flex: 1,
         maxWidth: '1000px',
@@ -110,7 +205,7 @@ export default function Dashboard() {
         padding: '2rem',
         width: '100%'
       }}>
-        {/* Control Bar */}
+        {/* 컨트롤 바 */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -125,7 +220,7 @@ export default function Dashboard() {
               fontWeight: 'bold',
               margin: '0 0 0.5rem 0'
             }}>
-              Current Project
+              내 프로젝트
             </h1>
             <p style={{
               color: '#b0b8c1',
@@ -137,11 +232,11 @@ export default function Dashboard() {
           </div>
 
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            {/* Search */}
+            {/* 검색 */}
             <div style={{ position: 'relative' }}>
               <input
                 type="text"
-                placeholder="검색..."
+                placeholder="프로젝트 검색..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
@@ -157,7 +252,7 @@ export default function Dashboard() {
               />
             </div>
 
-            {/* View Toggle */}
+            {/* 뷰 토글 */}
             <div style={{
               display: 'flex',
               background: '#23272f',
@@ -197,11 +292,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Projects Display */}
+        {/* 프로젝트 표시 */}
         {viewMode === 'grid' ? (
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
             gap: '1rem'
           }}>
             {filteredProjects.map((proj) => (
@@ -209,14 +304,13 @@ export default function Dashboard() {
                 key={proj.id}
                 onClick={() => handleProjectDetail(proj.name)}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
                   background: '#23272f',
                   borderRadius: '8px',
-                  padding: '1rem',
+                  padding: '1.5rem',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
-                  border: '1px solid transparent'
+                  border: '1px solid transparent',
+                  position: 'relative'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = '#2a2e37';
@@ -227,37 +321,59 @@ export default function Dashboard() {
                   e.currentTarget.style.borderColor = 'transparent';
                 }}
               >
-                <div style={{
-                  width: '35px',
-                  height: '35px',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: '0.75rem',
-                  flexShrink: 0
-                }}>
-                  <span style={{
-                    color: '#fff',
-                    fontWeight: 'bold',
-                    fontSize: '0.9rem'
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
                   }}>
-                    {proj.name.charAt(0).toUpperCase()}
-                  </span>
+                    <span style={{
+                      color: '#fff',
+                      fontWeight: 'bold',
+                      fontSize: '1.1rem'
+                    }}>
+                      {proj.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+
+                  {proj.isOwner && (
+                    <span style={{
+                      background: '#238636',
+                      color: '#fff',
+                      fontSize: '0.75rem',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      fontWeight: '500'
+                    }}>
+                      소유자
+                    </span>
+                  )}
                 </div>
 
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div>
                   <h3 style={{
                     fontWeight: '600',
-                    fontSize: '0.95rem',
-                    margin: 0,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
+                    fontSize: '1.1rem',
+                    margin: '0 0 0.5rem 0',
+                    color: '#fff'
                   }}>
                     {proj.name}
                   </h3>
+
+                  {proj.owner && (
+                    <p style={{
+                      fontSize: '0.85rem',
+                      color: '#8b949e',
+                      margin: 0
+                    }}>
+                      생성자: {proj.owner.name}
+                    </p>
+                  )}
                 </div>
               </div>
             ))}
@@ -276,7 +392,7 @@ export default function Dashboard() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  padding: '0.75rem 1rem',
+                  padding: '1rem',
                   cursor: 'pointer',
                   transition: 'background-color 0.2s ease',
                   borderBottom: index < filteredProjects.length - 1 ? '1px solid #2e333d' : 'none'
@@ -289,36 +405,58 @@ export default function Dashboard() {
                 }}
               >
                 <div style={{
-                  width: '30px',
-                  height: '30px',
+                  width: '32px',
+                  height: '32px',
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   borderRadius: '6px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  marginRight: '0.75rem',
+                  marginRight: '1rem',
                   flexShrink: 0
                 }}>
                   <span style={{
                     color: '#fff',
                     fontWeight: 'bold',
-                    fontSize: '0.8rem'
+                    fontSize: '0.9rem'
                   }}>
                     {proj.name.charAt(0).toUpperCase()}
                   </span>
                 </div>
 
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <h3 style={{
-                    fontWeight: '600',
-                    fontSize: '0.95rem',
-                    margin: 0,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }}>
-                    {proj.name}
-                  </h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                    <h3 style={{
+                      fontWeight: '600',
+                      fontSize: '1rem',
+                      margin: 0,
+                      color: '#fff'
+                    }}>
+                      {proj.name}
+                    </h3>
+                    {proj.isOwner && (
+                      <span style={{
+                        background: '#238636',
+                        color: '#fff',
+                        fontSize: '0.7rem',
+                        padding: '1px 6px',
+                        borderRadius: '8px',
+                        fontWeight: '500'
+                      }}>
+                        소유자
+                      </span>
+                    )}
+                  </div>
+
+                  {proj.owner && (
+                    <p style={{
+                      fontSize: '0.8rem',
+                      color: '#8b949e',
+                      margin: 0
+                    }}>
+                      생성자: {proj.owner.name}
+                    </p>
+                  )}
                 </div>
 
                 <svg
@@ -348,8 +486,8 @@ export default function Dashboard() {
             color: '#b0b8c1',
             border: '1px solid #2e333d'
           }}>
-            <p style={{ margin: 0, fontSize: '1rem' }}>
-              {searchTerm ? '검색 결과가 없습니다.' : '프로젝트가 없습니다.'}
+            <p style={{ margin: '0 0 1rem 0', fontSize: '1rem' }}>
+              {searchTerm ? '검색 결과가 없습니다.' : '아직 프로젝트가 없습니다.'}
             </p>
             {!searchTerm && (
               <button
@@ -357,13 +495,12 @@ export default function Dashboard() {
                 style={{
                   background: '#2563eb',
                   color: '#fff',
-                  padding: '8px 16px',
-                  borderRadius: '6px',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
                   fontWeight: '600',
                   border: 'none',
                   cursor: 'pointer',
-                  fontSize: '0.9rem',
-                  marginTop: '1rem',
+                  fontSize: '1rem',
                   transition: 'background 0.2s ease'
                 }}
                 onMouseEnter={(e) => {
@@ -379,7 +516,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Create New Project Button */}
+        {/* 새 프로젝트 버튼 */}
         <div style={{
           display: 'flex',
           justifyContent: 'center',
@@ -415,35 +552,6 @@ export default function Dashboard() {
           </button>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer style={{
-        backgroundColor: '#0d1117',
-        color: '#8b949e',
-        padding: '20px',
-        fontSize: '14px',
-        textAlign: 'center'
-      }}>
-        <div style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-          gap: '12px',
-          marginBottom: '8px'
-        }}>
-          <a href="#" style={{ color: '#8b949e', textDecoration: 'none' }}>Terms</a>
-          <a href="#" style={{ color: '#8b949e', textDecoration: 'none' }}>Privacy</a>
-          <a href="#" style={{ color: '#8b949e', textDecoration: 'none' }}>Security</a>
-          <a href="#" style={{ color: '#8b949e', textDecoration: 'none' }}>Status</a>
-          <a href="#" style={{ color: '#8b949e', textDecoration: 'none' }}>Docs</a>
-          <a href="#" style={{ color: '#8b949e', textDecoration: 'none' }}>Contact</a>
-          <a href="#" style={{ color: '#8b949e', textDecoration: 'none' }}>Manage cookies</a>
-          <a href="#" style={{ color: '#8b949e', textDecoration: 'none' }}>Do not share my personal information</a>
-        </div>
-        <div style={{ color: '#8b949e' }}>
-          <span>© 2025 Intellisia, Inc.</span>
-        </div>
-      </footer>
     </div>
   );
 }
