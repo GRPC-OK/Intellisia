@@ -1,16 +1,30 @@
-// NextAuth의 기본 설정 함수 및 타입 import
-import NextAuth from 'next-auth'
+import NextAuth from 'next-auth';
+import GitHubProvider from 'next-auth/providers/github';
+import prisma from '@/lib/prisma';
 
-// GitHub OAuth Provider import (NextAuth에서 공식 지원하는 소셜 로그인 제공자 중 하나)
-import GitHubProvider from 'next-auth/providers/github'
+// GitHub Profile 타입 정의
+interface GitHubProfileType {
+  id: string;
+  login: string;
+  name?: string | null;
+  email?: string | null;
+  avatar_url?: string;
+  html_url?: string;
+  [key: string]: unknown;
+}
 
-// NextAuth 설정을 기본 export
+// Session 타입 정의
+interface SessionType {
+  user?: {
+    email?: string | null;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
 export default NextAuth({
-
-  //  1. 인증 제공자 설정
   providers: [
     GitHubProvider({
-      // GitHub OAuth 앱에서 발급받은 Client ID와 Secret을 환경변수에서 불러옴
       clientId: process.env.GITHUB_CLIENT_ID!,
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
       authorization: {
@@ -21,32 +35,84 @@ export default NextAuth({
     }),
   ],
 
-  // ✅ JWT 기반 세션 전략 설정
   session: {
     strategy: 'jwt',
-    maxAge: 60 * 60 * 24 * 7, // 세션 유지 기간: 일주일 (초 단위)
+    maxAge: 60 * 60 * 24 * 7,
   },
 
   callbacks: {
     async jwt({ token, account }) {
-      // 처음 로그인 시 account에 GitHub에서 받은 정보가 들어있음
       if (account) {
-        // GitHub에서 받은 access_token을 JWT 토큰에 저장
-        token.accessToken = account.access_token
+        token.accessToken = account.access_token;
+        token.githubId = token.sub;
       }
-      // JWT 토큰 반환 (클라이언트에 저장되거나 이후 session 콜백에서 사용됨)
-      return token
+      return token;
     },
 
-    //  클라이언트가 useSession() 호출 시: session 객체 생성 단계
     async session({ session, token }) {
-      // jwt 콜백에서 token에 저장한 accessToken을 session 객체에도 복사
-      session.accessToken = token.accessToken
-      // 최종 session 객체 반환 → useSession()에서 이걸 받아서 사용함
-      return session
+      return {
+        ...session,
+        accessToken: token.accessToken,
+        user: {
+          ...session.user,
+          id: token.sub,
+          githubId: token.githubId,
+        }
+      };
+    },
+
+    async signIn({ profile }) {
+      if (profile) {
+        try {
+          const githubProfile = profile as GitHubProfileType;
+
+          let userEmail: string = githubProfile.email || '';
+
+          if (!userEmail) {
+            userEmail = `${githubProfile.login}@github.local`;
+          }
+
+          await prisma.user.upsert({
+            where: { email: userEmail },
+            update: {
+              name: githubProfile.name || githubProfile.login || 'GitHub User',
+              avatarUrl: githubProfile.avatar_url || '/default-avatar.png',
+            },
+            create: {
+              name: githubProfile.name || githubProfile.login || 'GitHub User',
+              email: userEmail,
+              avatarUrl: githubProfile.avatar_url || '/default-avatar.png',
+            },
+          });
+
+          console.log(`[Auth Success] User synchronized: ${userEmail}`);
+          return true;
+        } catch (error) {
+          console.error('[SignIn Callback Error]', error);
+          return true;
+        }
+      }
+      return true;
+    },
+
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith('/')) return `${baseUrl}${url}`;
+      if (new URL(url).origin === baseUrl) return url;
+      return `${baseUrl}/dashboard`;
     },
   },
 
-  //  필수: NextAuth의 내부 암호화용 시크릿 키 (세션/쿠키 암호화에 사용)
+  events: {
+    async signIn({ user, isNewUser }) {
+      console.log(`[Auth Event] Sign in: ${user.email}, isNewUser: ${isNewUser}`);
+    },
+
+    async signOut({ session }) {
+      const sessionTyped = session as unknown as SessionType;
+      console.log(`[Auth Event] Sign out: ${sessionTyped?.user?.email || 'Unknown'}`);
+    },
+  },
+
+  debug: process.env.NODE_ENV === 'development',
   secret: process.env.NEXTAUTH_SECRET,
-})
+});
